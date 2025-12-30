@@ -34,6 +34,13 @@ interface AdminStats {
   pendingQueries: number;
 }
 
+interface BatchStats {
+  vlsi: number;
+  aiMl: number;
+  mern: number;
+  java: number;
+}
+
 export default function Dashboard() {
   const { user, role, studentStatus } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -50,6 +57,12 @@ export default function Dashboard() {
     totalFaculty: 0,
     pendingLeaves: 0,
     pendingQueries: 0,
+  });
+  const [batchStats, setBatchStats] = useState<BatchStats>({
+    vlsi: 0,
+    aiMl: 0,
+    mern: 0,
+    java: 0,
   });
 
   useEffect(() => {
@@ -117,6 +130,7 @@ export default function Dashboard() {
             { count: facultyCount },
             { count: leavesCount },
             { count: queriesCount },
+            { data: roleData },
           ] = await Promise.all([
             supabase
               .from("student_profiles")
@@ -138,7 +152,20 @@ export default function Dashboard() {
               .from("admin_queries")
               .select("*", { count: "exact", head: true })
               .eq("is_resolved", false),
+            supabase
+              .from("student_profiles")
+              .select("internship_role")
+              .eq("status", "approved"),
           ]);
+
+          // Calculate batch-wise stats
+          const roles = roleData || [];
+          setBatchStats({
+            vlsi: roles.filter((r) => r.internship_role === "vlsi").length,
+            aiMl: roles.filter((r) => r.internship_role === "ai-ml").length,
+            mern: roles.filter((r) => r.internship_role === "mern").length,
+            java: roles.filter((r) => r.internship_role === "java").length,
+          });
 
           setAdminStats({
             pendingApprovals: pendingCount || 0,
@@ -425,6 +452,54 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Batch-wise Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Batch-wise Student Statistics</CardTitle>
+              <CardDescription>Students enrolled by internship track</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="flex items-center gap-4 rounded-lg border p-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                    <span className="font-bold">V</span>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{batchStats.vlsi}</p>
+                    <p className="text-sm text-muted-foreground">VLSI</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 rounded-lg border p-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+                    <span className="font-bold">AI</span>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{batchStats.aiMl}</p>
+                    <p className="text-sm text-muted-foreground">AI / ML</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 rounded-lg border p-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-700">
+                    <span className="font-bold">M</span>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{batchStats.mern}</p>
+                    <p className="text-sm text-muted-foreground">MERN</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 rounded-lg border p-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+                    <span className="font-bold">J</span>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{batchStats.java}</p>
+                    <p className="text-sm text-muted-foreground">Java</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </DashboardLayout>
     );
