@@ -50,6 +50,8 @@ export type Database = {
       batches: {
         Row: {
           assigned_faculty_id: string | null
+          batch_strength: number | null
+          batch_timings: string | null
           course_code: string
           created_at: string
           description: string | null
@@ -61,6 +63,8 @@ export type Database = {
         }
         Insert: {
           assigned_faculty_id?: string | null
+          batch_strength?: number | null
+          batch_timings?: string | null
           course_code?: string
           created_at?: string
           description?: string | null
@@ -72,6 +76,8 @@ export type Database = {
         }
         Update: {
           assigned_faculty_id?: string | null
+          batch_strength?: number | null
+          batch_timings?: string | null
           course_code?: string
           created_at?: string
           description?: string | null
@@ -91,10 +97,14 @@ export type Database = {
           id: string
           is_locked: boolean | null
           learning_outcome: string | null
+          reference_links: string | null
+          skills_gained: string | null
+          title: string | null
           updated_at: string
           user_id: string
           week_number: number
           work_description: string
+          work_summary: string | null
         }
         Insert: {
           created_at?: string
@@ -103,10 +113,14 @@ export type Database = {
           id?: string
           is_locked?: boolean | null
           learning_outcome?: string | null
+          reference_links?: string | null
+          skills_gained?: string | null
+          title?: string | null
           updated_at?: string
           user_id: string
           week_number?: number
           work_description: string
+          work_summary?: string | null
         }
         Update: {
           created_at?: string
@@ -115,10 +129,14 @@ export type Database = {
           id?: string
           is_locked?: boolean | null
           learning_outcome?: string | null
+          reference_links?: string | null
+          skills_gained?: string | null
+          title?: string | null
           updated_at?: string
           user_id?: string
           week_number?: number
           work_description?: string
+          work_summary?: string | null
         }
         Relationships: []
       }
@@ -132,6 +150,7 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["leave_status"] | null
+          title: string | null
           user_id: string
         }
         Insert: {
@@ -143,6 +162,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["leave_status"] | null
+          title?: string | null
           user_id: string
         }
         Update: {
@@ -154,6 +174,7 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["leave_status"] | null
+          title?: string | null
           user_id?: string
         }
         Relationships: []
