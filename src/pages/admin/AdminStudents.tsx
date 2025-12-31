@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
@@ -31,19 +31,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, Shield, Users, Filter, Eye } from "lucide-react";
+import { Shield, Users, Filter, Eye } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
-interface PendingStudent {
+interface Student {
   id: string;
   user_id: string;
   student_id: string | null;
+  usn: string | null;
   internship_role: string | null;
   skill_level: string | null;
+  status: string | null;
   college_name: string | null;
   branch: string | null;
-  usn: string | null;
   batch_id: string | null;
   created_at: string;
   profile: {
@@ -60,88 +60,75 @@ interface PendingStudent {
   } | null;
 }
 
-export default function Approvals() {
+interface Batch {
+  id: string;
+  name: string;
+}
+
+export default function AdminStudents() {
   const { role } = useAuth();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [pendingStudents, setPendingStudents] = useState<PendingStudent[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<PendingStudent[]>([]);
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [selectedStudent, setSelectedStudent] = useState<PendingStudent | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [courseFilter, setCourseFilter] = useState("all");
+  const [batchFilter, setBatchFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
-  const fetchPendingStudents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("student_profiles")
-        .select(`
-          *,
-          profile:profiles!student_profiles_user_id_fkey (
-            full_name,
-            email,
-            phone,
-            avatar_url,
-            date_of_birth,
-            bio,
-            linkedin_url
-          ),
-          batch:batches!fk_student_batch (name)
-        `)
-        .eq("status", "pending")
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-      setPendingStudents((data as unknown as PendingStudent[]) || []);
-      setFilteredStudents((data as unknown as PendingStudent[]) || []);
-    } catch (error) {
-      console.error("Error fetching pending students:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    let result = pendingStudents;
-    if (roleFilter !== "all") {
-      result = result.filter((s) => s.internship_role === roleFilter);
-    }
-    setFilteredStudents(result);
-  }, [roleFilter, pendingStudents]);
+    const fetchData = async () => {
+      try {
+        const [studentsRes, batchesRes] = await Promise.all([
+          supabase
+            .from("student_profiles")
+            .select(`
+              *,
+              profile:profiles!student_profiles_user_id_fkey (
+                full_name, email, phone, avatar_url, date_of_birth, bio, linkedin_url
+              ),
+              batch:batches!fk_student_batch (name)
+            `)
+            .order("created_at", { ascending: false }),
+          supabase.from("batches").select("id, name").order("name"),
+        ]);
 
-  useEffect(() => {
+        if (studentsRes.error) throw studentsRes.error;
+        if (batchesRes.error) throw batchesRes.error;
+
+        setStudents((studentsRes.data as unknown as Student[]) || []);
+        setFilteredStudents((studentsRes.data as unknown as Student[]) || []);
+        setBatches(batchesRes.data || []);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (role === "admin") {
-      fetchPendingStudents();
+      fetchData();
     }
   }, [role]);
 
-  const handleApproval = async (studentProfileId: string, approved: boolean) => {
-    setProcessingId(studentProfileId);
-    try {
-      const { error } = await supabase
-        .from("student_profiles")
-        .update({ status: approved ? "approved" : "rejected" })
-        .eq("id", studentProfileId);
+  useEffect(() => {
+    let result = students;
 
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `Student ${approved ? "approved" : "rejected"} successfully.`,
-      });
-
-      fetchPendingStudents();
-    } catch (error) {
-      console.error("Error updating student status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update student status.",
-        variant: "destructive",
-      });
-    } finally {
-      setProcessingId(null);
+    if (courseFilter !== "all") {
+      result = result.filter((s) => s.internship_role === courseFilter);
     }
-  };
+
+    if (batchFilter !== "all") {
+      result = result.filter((s) => s.batch_id === batchFilter);
+    }
+
+    if (statusFilter !== "all") {
+      result = result.filter((s) => s.status === statusFilter);
+    }
+
+    setFilteredStudents(result);
+  }, [courseFilter, batchFilter, statusFilter, students]);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -151,6 +138,17 @@ export default function Approvals() {
       .join("")
       .toUpperCase()
       .slice(0, 2);
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case "approved":
+        return <Badge className="bg-success/10 text-success">Approved</Badge>;
+      case "rejected":
+        return <Badge className="bg-destructive/10 text-destructive">Rejected</Badge>;
+      default:
+        return <Badge className="bg-warning/10 text-warning">Pending</Badge>;
+    }
   };
 
   const getRoleBadgeColor = (role: string | null) => {
@@ -167,6 +165,15 @@ export default function Approvals() {
         return "bg-muted text-muted-foreground";
     }
   };
+
+  // Calculate stats
+  const totalStudents = students.length;
+  const approvedCount = students.filter((s) => s.status === "approved").length;
+  const pendingCount = students.filter((s) => s.status === "pending").length;
+  const batchStats = batches.map((batch) => ({
+    name: batch.name,
+    count: students.filter((s) => s.batch_id === batch.id).length,
+  }));
 
   if (role !== "admin") {
     return (
@@ -194,8 +201,60 @@ export default function Approvals() {
     <DashboardLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold md:text-3xl">Student Approvals</h1>
-          <p className="text-muted-foreground">Review and approve pending student registrations.</p>
+          <h1 className="text-2xl font-bold md:text-3xl">Students Management</h1>
+          <p className="text-muted-foreground">View and manage all students.</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <Users className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{totalStudents}</p>
+                <p className="text-sm text-muted-foreground">Total Students</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
+                <Users className="h-6 w-6 text-success" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{approvedCount}</p>
+                <p className="text-sm text-muted-foreground">Approved</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
+                <Users className="h-6 w-6 text-warning" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{pendingCount}</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+              </div>
+            </CardContent>
+          </Card>
+          {batchStats.length > 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm font-medium text-muted-foreground">Batch-wise</p>
+                <div className="mt-2 space-y-1">
+                  {batchStats.slice(0, 3).map((stat) => (
+                    <div key={stat.name} className="flex justify-between text-sm">
+                      <span>{stat.name}</span>
+                      <span className="font-medium">{stat.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Filters */}
@@ -207,15 +266,15 @@ export default function Approvals() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label>Internship Role</Label>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <Label>Course</Label>
+                <Select value={courseFilter} onValueChange={setCourseFilter}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="all">All Courses</SelectItem>
                     <SelectItem value="ai-ml">AI-ML</SelectItem>
                     <SelectItem value="java">Java</SelectItem>
                     <SelectItem value="vlsi">VLSI</SelectItem>
@@ -223,27 +282,60 @@ export default function Approvals() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Batch</Label>
+                <Select value={batchFilter} onValueChange={setBatchFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Batches</SelectItem>
+                    {batches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.id}>
+                        {batch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* Students Table */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Pending Approvals
+              All Students
             </CardTitle>
             <CardDescription>
-              {filteredStudents.length} student(s) waiting for approval
+              {filteredStudents.length} student(s) found
             </CardDescription>
           </CardHeader>
           <CardContent>
             {filteredStudents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <Shield className="mb-4 h-12 w-12 text-success" />
-                <h3 className="text-lg font-semibold">All caught up!</h3>
+                <Users className="mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="text-lg font-semibold">No students found</h3>
                 <p className="text-muted-foreground">
-                  No pending approvals at the moment.
+                  No students match your current filters.
                 </p>
               </div>
             ) : (
@@ -252,10 +344,11 @@ export default function Approvals() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Student</TableHead>
-                      <TableHead>Internship Role</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Registered</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Student ID</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">View</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -270,63 +363,36 @@ export default function Approvals() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium">{student.profile?.full_name || "Unknown"}</p>
+                              <p className="font-medium">{student.profile?.full_name}</p>
                               <p className="text-xs text-muted-foreground">
-                                {student.profile?.email || "No email"}
+                                {student.profile?.email}
                               </p>
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono">
+                            {student.student_id || "N/A"}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge className={getRoleBadgeColor(student.internship_role)}>
                             {student.internship_role?.toUpperCase() || "N/A"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{student.profile?.phone || "-"}</TableCell>
-                        <TableCell>
-                          {format(parseISO(student.created_at), "MMM d, yyyy")}
-                        </TableCell>
+                        <TableCell>{student.batch?.name || "-"}</TableCell>
+                        <TableCell>{getStatusBadge(student.status)}</TableCell>
                         <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                setSelectedStudent(student);
-                                setViewDialogOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-destructive hover:bg-destructive/10"
-                              onClick={() => handleApproval(student.id, false)}
-                              disabled={processingId === student.id}
-                            >
-                              {processingId === student.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="default"
-                              onClick={() => handleApproval(student.id, true)}
-                              disabled={processingId === student.id}
-                            >
-                              {processingId === student.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <Check className="mr-1 h-4 w-4" />
-                                  Approve
-                                </>
-                              )}
-                            </Button>
-                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedStudent(student);
+                              setViewDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -361,7 +427,7 @@ export default function Approvals() {
                   <p className="text-sm text-muted-foreground">
                     {selectedStudent.profile?.email}
                   </p>
-                  <Badge className="mt-1 bg-warning/10 text-warning">Pending</Badge>
+                  {getStatusBadge(selectedStudent.status)}
                 </div>
               </div>
 
@@ -439,30 +505,9 @@ export default function Approvals() {
                 </div>
               )}
 
-              <div className="flex justify-end gap-3">
+              <div className="flex justify-end">
                 <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
                   Close
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => {
-                    handleApproval(selectedStudent.id, false);
-                    setViewDialogOpen(false);
-                  }}
-                  disabled={processingId === selectedStudent.id}
-                >
-                  <X className="mr-1 h-4 w-4" />
-                  Reject
-                </Button>
-                <Button
-                  onClick={() => {
-                    handleApproval(selectedStudent.id, true);
-                    setViewDialogOpen(false);
-                  }}
-                  disabled={processingId === selectedStudent.id}
-                >
-                  <Check className="mr-1 h-4 w-4" />
-                  Approve
                 </Button>
               </div>
             </div>

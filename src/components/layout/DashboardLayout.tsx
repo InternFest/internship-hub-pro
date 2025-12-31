@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -191,7 +192,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                   <p className="truncate font-medium">{user?.user_metadata?.full_name || "User"}</p>
-                  <p className="truncate text-xs text-muted-foreground capitalize">{role}</p>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "mt-0.5 text-xs capitalize",
+                      role === "admin" && "border-destructive/50 text-destructive",
+                      role === "faculty" && "border-accent/50 text-accent",
+                      role === "student" && "border-primary/50 text-primary"
+                    )}
+                  >
+                    {role}
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -244,7 +255,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <p className="truncate text-sm font-medium">
                     {user?.user_metadata?.full_name || "User"}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground capitalize">{role}</p>
+                  <Badge 
+                    variant="outline" 
+                    className={cn(
+                      "mt-0.5 text-xs capitalize",
+                      role === "admin" && "border-destructive/50 text-destructive",
+                      role === "faculty" && "border-accent/50 text-accent",
+                      role === "student" && "border-primary/50 text-primary"
+                    )}
+                  >
+                    {role}
+                  </Badge>
                 </div>
               </button>
             </DropdownMenuTrigger>
