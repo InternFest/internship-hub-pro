@@ -34,6 +34,10 @@ interface DiaryEntry {
   work_description: string;
   hours_worked: number;
   learning_outcome: string | null;
+  title: string | null;
+  work_summary: string | null;
+  reference_links: string | null;
+  skills_gained: string | null;
   is_locked: boolean;
   created_at: string;
 }
@@ -49,9 +53,13 @@ export default function InternshipDiary() {
 
   // Form state
   const [entryDate, setEntryDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [title, setTitle] = useState("");
   const [workDescription, setWorkDescription] = useState("");
+  const [workSummary, setWorkSummary] = useState("");
   const [hoursWorked, setHoursWorked] = useState("");
+  const [referenceLinks, setReferenceLinks] = useState("");
   const [learningOutcome, setLearningOutcome] = useState("");
+  const [skillsGained, setSkillsGained] = useState("");
 
   const fetchEntries = async () => {
     if (!user) return;
@@ -114,9 +122,13 @@ export default function InternshipDiary() {
           .from("internship_diary")
           .update({
             entry_date: entryDate,
+            title: title || null,
             work_description: workDescription,
+            work_summary: workSummary || null,
             hours_worked: parseFloat(hoursWorked),
+            reference_links: referenceLinks || null,
             learning_outcome: learningOutcome || null,
+            skills_gained: skillsGained || null,
           })
           .eq("id", editingEntry.id);
 
@@ -132,9 +144,13 @@ export default function InternshipDiary() {
           user_id: user.id,
           week_number: getCurrentWeek(),
           entry_date: entryDate,
+          title: title || null,
           work_description: workDescription,
+          work_summary: workSummary || null,
           hours_worked: parseFloat(hoursWorked),
+          reference_links: referenceLinks || null,
           learning_outcome: learningOutcome || null,
+          skills_gained: skillsGained || null,
         });
 
         if (error) throw error;
@@ -164,17 +180,25 @@ export default function InternshipDiary() {
 
   const resetForm = () => {
     setEntryDate(format(new Date(), "yyyy-MM-dd"));
+    setTitle("");
     setWorkDescription("");
+    setWorkSummary("");
     setHoursWorked("");
+    setReferenceLinks("");
     setLearningOutcome("");
+    setSkillsGained("");
   };
 
   const openEditDialog = (entry: DiaryEntry) => {
     setEditingEntry(entry);
     setEntryDate(entry.entry_date);
+    setTitle(entry.title || "");
     setWorkDescription(entry.work_description);
+    setWorkSummary(entry.work_summary || "");
     setHoursWorked(entry.hours_worked.toString());
+    setReferenceLinks(entry.reference_links || "");
     setLearningOutcome(entry.learning_outcome || "");
+    setSkillsGained(entry.skills_gained || "");
     setDialogOpen(true);
   };
 
@@ -245,54 +269,97 @@ export default function InternshipDiary() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="entryDate">Date *</Label>
+                    <Input
+                      id="entryDate"
+                      type="date"
+                      value={entryDate}
+                      onChange={(e) => setEntryDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="hoursWorked">Hours Worked *</Label>
+                    <Input
+                      id="hoursWorked"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max="24"
+                      placeholder="8"
+                      value={hoursWorked}
+                      onChange={(e) => setHoursWorked(e.target.value)}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="entryDate">Date</Label>
+                  <Label htmlFor="title">Entry Title</Label>
                   <Input
-                    id="entryDate"
-                    type="date"
-                    value={entryDate}
-                    onChange={(e) => setEntryDate(e.target.value)}
+                    id="title"
+                    placeholder="Brief title for today's work..."
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="workDescription">Work Description *</Label>
+                  <Label htmlFor="workDescription">What I Worked On *</Label>
                   <Textarea
                     id="workDescription"
                     placeholder="Describe what you worked on today..."
                     value={workDescription}
                     onChange={(e) => setWorkDescription(e.target.value)}
-                    rows={4}
+                    rows={3}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="hoursWorked">Hours Worked *</Label>
+                  <Label htmlFor="workSummary">Work Summary</Label>
+                  <Textarea
+                    id="workSummary"
+                    placeholder="Brief summary of the day's work..."
+                    value={workSummary}
+                    onChange={(e) => setWorkSummary(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="referenceLinks">Reference Links</Label>
                   <Input
-                    id="hoursWorked"
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    max="24"
-                    placeholder="8"
-                    value={hoursWorked}
-                    onChange={(e) => setHoursWorked(e.target.value)}
+                    id="referenceLinks"
+                    placeholder="URLs to relevant resources, documentation..."
+                    value={referenceLinks}
+                    onChange={(e) => setReferenceLinks(e.target.value)}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="learningOutcome">Learning / Outcome</Label>
+                  <Label htmlFor="learningOutcome">Learnings / Outcomes</Label>
                   <Textarea
                     id="learningOutcome"
                     placeholder="What did you learn today?"
                     value={learningOutcome}
                     onChange={(e) => setLearningOutcome(e.target.value)}
-                    rows={3}
+                    rows={2}
                   />
                 </div>
 
-                <div className="flex justify-end gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="skillsGained">Skills Gained</Label>
+                  <Input
+                    id="skillsGained"
+                    placeholder="e.g., React, TypeScript, API integration..."
+                    value={skillsGained}
+                    onChange={(e) => setSkillsGained(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
                   <Button variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancel
                   </Button>
@@ -388,8 +455,8 @@ export default function InternshipDiary() {
                           <Card key={entry.id} className="transition-colors hover:bg-muted/30">
                             <CardContent className="p-4">
                               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                <div className="flex-1 space-y-2">
-                                  <div className="flex items-center gap-2">
+                              <div className="flex-1 space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
                                     <span className="font-medium">
                                       {format(parseISO(entry.entry_date), "EEEE, MMM d, yyyy")}
@@ -398,10 +465,36 @@ export default function InternshipDiary() {
                                       {entry.hours_worked}h
                                     </Badge>
                                   </div>
+                                  {entry.title && (
+                                    <p className="font-medium">{entry.title}</p>
+                                  )}
                                   <p className="text-sm">{entry.work_description}</p>
+                                  {entry.work_summary && (
+                                    <p className="text-sm text-muted-foreground">
+                                      <strong>Summary:</strong> {entry.work_summary}
+                                    </p>
+                                  )}
                                   {entry.learning_outcome && (
                                     <p className="text-sm text-muted-foreground">
                                       <strong>Learning:</strong> {entry.learning_outcome}
+                                    </p>
+                                  )}
+                                  {entry.skills_gained && (
+                                    <p className="text-sm text-muted-foreground">
+                                      <strong>Skills:</strong> {entry.skills_gained}
+                                    </p>
+                                  )}
+                                  {entry.reference_links && (
+                                    <p className="text-sm text-muted-foreground">
+                                      <strong>References:</strong>{" "}
+                                      <a
+                                        href={entry.reference_links}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-primary hover:underline"
+                                      >
+                                        {entry.reference_links}
+                                      </a>
                                     </p>
                                   )}
                                 </div>
