@@ -41,12 +41,19 @@ interface StudentProfileData {
   status: string | null;
 }
 
+interface Batch {
+  id: string;
+  name: string;
+  end_date: string;
+}
+
 export default function Profile() {
   const { user, role } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [batches, setBatches] = useState<Batch[]>([]);
 
   const [profile, setProfile] = useState<ProfileData>({
     full_name: "",
@@ -95,6 +102,16 @@ export default function Profile() {
             resume_url: profileData.resume_url,
           });
         }
+
+        // Fetch active batches (not completed)
+        const today = new Date().toISOString().split('T')[0];
+        const { data: batchesData } = await supabase
+          .from("batches")
+          .select("id, name, end_date")
+          .gte("end_date", today)
+          .order("name");
+        
+        setBatches(batchesData || []);
 
         // Fetch student profile if role is student
         if (role === "student") {
@@ -455,7 +472,7 @@ export default function Profile() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="internshipRole">Internship Role</Label>
+                        <Label htmlFor="internshipRole">Batch (Internship Role)</Label>
                         <Select
                           value={studentProfile.internship_role || ""}
                           onValueChange={(value) =>
@@ -463,13 +480,18 @@ export default function Profile() {
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select role" />
+                            <SelectValue placeholder="Select batch" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="ai-ml">AI-ML</SelectItem>
-                            <SelectItem value="java">Java</SelectItem>
-                            <SelectItem value="vlsi">VLSI</SelectItem>
-                            <SelectItem value="mern">MERN</SelectItem>
+                            {batches.length === 0 ? (
+                              <SelectItem value="" disabled>No active batches available</SelectItem>
+                            ) : (
+                              batches.map((batch) => (
+                                <SelectItem key={batch.id} value={batch.name}>
+                                  {batch.name}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       </div>

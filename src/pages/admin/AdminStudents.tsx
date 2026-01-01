@@ -54,9 +54,7 @@ interface Student {
     date_of_birth: string | null;
     bio: string | null;
     linkedin_url: string | null;
-  } | null;
-  batch: {
-    name: string;
+    resume_url: string | null;
   } | null;
 }
 
@@ -71,9 +69,8 @@ export default function AdminStudents() {
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
-  const [courseFilter, setCourseFilter] = useState("all");
   const [batchFilter, setBatchFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("approved");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -93,7 +90,7 @@ export default function AdminStudents() {
         const userIds = studentsData?.map(s => s.user_id) || [];
         const { data: profilesData } = await supabase
           .from("profiles")
-          .select("id, full_name, email, phone, avatar_url, date_of_birth, bio, linkedin_url")
+          .select("id, full_name, email, phone, avatar_url, date_of_birth, bio, linkedin_url, resume_url")
           .in("id", userIds);
 
         // Fetch batches
@@ -108,7 +105,6 @@ export default function AdminStudents() {
         const studentsWithProfiles = (studentsData || []).map(student => ({
           ...student,
           profile: profilesData?.find(p => p.id === student.user_id) || null,
-          batch: batchesData?.find(b => b.id === student.batch_id) || null,
         }));
 
         setStudents(studentsWithProfiles as unknown as Student[]);
@@ -141,12 +137,9 @@ export default function AdminStudents() {
       );
     }
 
-    if (courseFilter !== "all") {
-      result = result.filter((s) => s.internship_role === courseFilter);
-    }
-
+    // Filter by batch (internship_role now stores batch name)
     if (batchFilter !== "all") {
-      result = result.filter((s) => s.batch_id === batchFilter);
+      result = result.filter((s) => s.internship_role === batchFilter);
     }
 
     if (statusFilter !== "all") {
@@ -154,7 +147,7 @@ export default function AdminStudents() {
     }
 
     setFilteredStudents(result);
-  }, [courseFilter, batchFilter, statusFilter, searchQuery, students]);
+  }, [batchFilter, statusFilter, searchQuery, students]);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -177,28 +170,15 @@ export default function AdminStudents() {
     }
   };
 
-  const getRoleBadgeColor = (role: string | null) => {
-    switch (role) {
-      case "ai-ml":
-        return "bg-purple-100 text-purple-700";
-      case "java":
-        return "bg-orange-100 text-orange-700";
-      case "vlsi":
-        return "bg-blue-100 text-blue-700";
-      case "mern":
-        return "bg-green-100 text-green-700";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
-
   // Calculate stats
   const totalStudents = students.length;
   const approvedCount = students.filter((s) => s.status === "approved").length;
   const pendingCount = students.filter((s) => s.status === "pending").length;
+  
+  // Batch stats based on internship_role (which now stores batch name)
   const batchStats = batches.map((batch) => ({
     name: batch.name,
-    count: students.filter((s) => s.batch_id === batch.id).length,
+    count: students.filter((s) => s.internship_role === batch.name).length,
   }));
 
   if (role !== "admin") {
@@ -303,25 +283,9 @@ export default function AdminStudents() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Course</Label>
-                <Select value={courseFilter} onValueChange={setCourseFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Courses</SelectItem>
-                    <SelectItem value="ai-ml">AI-ML</SelectItem>
-                    <SelectItem value="java">Java</SelectItem>
-                    <SelectItem value="vlsi">VLSI</SelectItem>
-                    <SelectItem value="mern">MERN</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Batch</Label>
+                <Label>Batch (Internship Role)</Label>
                 <Select value={batchFilter} onValueChange={setBatchFilter}>
                   <SelectTrigger>
                     <SelectValue />
@@ -329,7 +293,7 @@ export default function AdminStudents() {
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
                     {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.id}>
+                      <SelectItem key={batch.id} value={batch.name}>
                         {batch.name}
                       </SelectItem>
                     ))}
@@ -382,7 +346,8 @@ export default function AdminStudents() {
                     <TableRow>
                       <TableHead>Student</TableHead>
                       <TableHead>Student ID</TableHead>
-                      <TableHead>Course</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
                       <TableHead>Batch</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">View</TableHead>
@@ -399,12 +364,9 @@ export default function AdminStudents() {
                                 {getInitials(student.profile?.full_name)}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <p className="font-medium">{student.profile?.full_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {student.profile?.email}
-                              </p>
-                            </div>
+                            <span className="font-medium">
+                              {student.profile?.full_name || "Unknown"}
+                            </span>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -412,12 +374,13 @@ export default function AdminStudents() {
                             {student.student_id || "N/A"}
                           </Badge>
                         </TableCell>
+                        <TableCell>{student.profile?.email || "-"}</TableCell>
+                        <TableCell>{student.profile?.phone || "-"}</TableCell>
                         <TableCell>
-                          <Badge className={getRoleBadgeColor(student.internship_role)}>
-                            {student.internship_role?.toUpperCase() || "N/A"}
+                          <Badge variant="secondary">
+                            {student.internship_role || "N/A"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{student.batch?.name || "-"}</TableCell>
                         <TableCell>{getStatusBadge(student.status)}</TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -492,18 +455,14 @@ export default function AdminStudents() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Internship Role</span>
-                  <Badge className={getRoleBadgeColor(selectedStudent.internship_role)}>
-                    {selectedStudent.internship_role?.toUpperCase() || "N/A"}
+                  <span className="text-sm text-muted-foreground">Batch</span>
+                  <Badge variant="secondary">
+                    {selectedStudent.internship_role || "N/A"}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Skill Level</span>
                   <span className="capitalize">{selectedStudent.skill_level || "-"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Batch</span>
-                  <span>{selectedStudent.batch?.name || "-"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">College</span>
@@ -538,6 +497,20 @@ export default function AdminStudents() {
                     className="mt-1 text-sm text-primary hover:underline"
                   >
                     {selectedStudent.profile.linkedin_url}
+                  </a>
+                </div>
+              )}
+
+              {selectedStudent.profile?.resume_url && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Resume</h4>
+                  <a
+                    href={selectedStudent.profile.resume_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 text-sm text-primary hover:underline"
+                  >
+                    View Resume
                   </a>
                 </div>
               )}

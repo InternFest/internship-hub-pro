@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -13,7 +14,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SkeletonTable } from "@/components/SkeletonCard";
-import { Shield, UserCog } from "lucide-react";
+import { Shield, UserCog, Calendar } from "lucide-react";
+import { format, parseISO } from "date-fns";
+
+interface Batch {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  assigned_faculty_id: string | null;
+}
 
 interface FacultyMember {
   id: string;
@@ -24,6 +34,7 @@ interface FacultyMember {
     phone: string | null;
     avatar_url: string | null;
   } | null;
+  batches: Batch[];
 }
 
 export default function AdminFaculty() {
@@ -49,11 +60,24 @@ export default function AdminFaculty() {
           .select("id, full_name, email, phone, avatar_url")
           .in("id", userIds);
 
-        // Merge data
-        const facultyWithProfiles = (rolesData || []).map(role => ({
-          ...role,
-          profile: profilesData?.find(p => p.id === role.user_id) || null,
-        }));
+        // Get all batches
+        const { data: batchesData } = await supabase
+          .from("batches")
+          .select("id, name, start_date, end_date, assigned_faculty_id")
+          .order("start_date", { ascending: false });
+
+        // Merge data - assign batches to faculty members
+        const facultyWithProfiles = (rolesData || []).map(role => {
+          const profile = profilesData?.find(p => p.id === role.user_id) || null;
+          const assignedBatches = (batchesData || []).filter(
+            b => b.assigned_faculty_id === role.user_id
+          );
+          return {
+            ...role,
+            profile,
+            batches: assignedBatches,
+          };
+        });
 
         setFaculty(facultyWithProfiles as unknown as FacultyMember[]);
       } catch (error) {
@@ -105,7 +129,7 @@ export default function AdminFaculty() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">Faculty Management</h1>
-          <p className="text-muted-foreground">View all registered faculty members.</p>
+          <p className="text-muted-foreground">View all registered faculty members and their batch assignments.</p>
         </div>
 
         <Card>
@@ -135,6 +159,8 @@ export default function AdminFaculty() {
                       <TableHead>Faculty Member</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Phone</TableHead>
+                      <TableHead>Batch Handling</TableHead>
+                      <TableHead>Batch Duration</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -155,6 +181,35 @@ export default function AdminFaculty() {
                         </TableCell>
                         <TableCell>{member.profile?.email || "-"}</TableCell>
                         <TableCell>{member.profile?.phone || "-"}</TableCell>
+                        <TableCell>
+                          {member.batches.length === 0 ? (
+                            <span className="text-muted-foreground">No batches assigned</span>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {member.batches.map((batch) => (
+                                <Badge key={batch.id} variant="secondary">
+                                  {batch.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {member.batches.length === 0 ? (
+                            "-"
+                          ) : (
+                            <div className="space-y-1">
+                              {member.batches.map((batch) => (
+                                <div key={batch.id} className="flex items-center gap-2 text-sm">
+                                  <Calendar className="h-3 w-3 text-muted-foreground" />
+                                  <span>
+                                    {format(parseISO(batch.start_date), "MMM d")} - {format(parseISO(batch.end_date), "MMM d, yyyy")}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

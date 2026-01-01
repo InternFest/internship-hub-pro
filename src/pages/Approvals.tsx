@@ -32,8 +32,13 @@ import {
 } from "@/components/ui/dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, Shield, Users, Filter, Eye } from "lucide-react";
+import { Loader2, Check, X, Shield, Users, Filter, Eye, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
+
+interface Batch {
+  id: string;
+  name: string;
+}
 
 interface PendingStudent {
   id: string;
@@ -54,9 +59,7 @@ interface PendingStudent {
     date_of_birth: string | null;
     bio: string | null;
     linkedin_url: string | null;
-  } | null;
-  batch: {
-    name: string;
+    resume_url: string | null;
   } | null;
 }
 
@@ -66,34 +69,47 @@ export default function Approvals() {
   const [loading, setLoading] = useState(true);
   const [pendingStudents, setPendingStudents] = useState<PendingStudent[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<PendingStudent[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [batchFilter, setBatchFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<PendingStudent | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   const fetchPendingStudents = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch pending student profiles
+      const { data: studentData, error } = await supabase
         .from("student_profiles")
-        .select(`
-          *,
-          profile:profiles!student_profiles_user_id_fkey (
-            full_name,
-            email,
-            phone,
-            avatar_url,
-            date_of_birth,
-            bio,
-            linkedin_url
-          ),
-          batch:batches!fk_student_batch (name)
-        `)
+        .select("*")
         .eq("status", "pending")
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setPendingStudents((data as unknown as PendingStudent[]) || []);
-      setFilteredStudents((data as unknown as PendingStudent[]) || []);
+
+      // Fetch profiles for all students
+      const userIds = studentData?.map(s => s.user_id) || [];
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, phone, avatar_url, date_of_birth, bio, linkedin_url, resume_url")
+        .in("id", userIds);
+
+      // Fetch batches
+      const { data: batchesData } = await supabase
+        .from("batches")
+        .select("id, name")
+        .order("name");
+
+      setBatches(batchesData || []);
+
+      // Merge data
+      const studentsWithProfiles = (studentData || []).map(student => ({
+        ...student,
+        profile: profilesData?.find(p => p.id === student.user_id) || null,
+      }));
+
+      setPendingStudents(studentsWithProfiles as unknown as PendingStudent[]);
+      setFilteredStudents(studentsWithProfiles as unknown as PendingStudent[]);
     } catch (error) {
       console.error("Error fetching pending students:", error);
     } finally {
@@ -103,11 +119,22 @@ export default function Approvals() {
 
   useEffect(() => {
     let result = pendingStudents;
-    if (roleFilter !== "all") {
-      result = result.filter((s) => s.internship_role === roleFilter);
+    
+    // Filter by batch (internship_role stores batch name)
+    if (batchFilter !== "all") {
+      result = result.filter((s) => s.internship_role === batchFilter);
     }
+
+    // Filter by date
+    if (dateFilter) {
+      result = result.filter((s) => {
+        const studentDate = s.created_at.split('T')[0];
+        return studentDate === dateFilter;
+      });
+    }
+
     setFilteredStudents(result);
-  }, [roleFilter, pendingStudents]);
+  }, [batchFilter, dateFilter, pendingStudents]);
 
   useEffect(() => {
     if (role === "admin") {
@@ -153,21 +180,6 @@ export default function Approvals() {
       .slice(0, 2);
   };
 
-  const getRoleBadgeColor = (role: string | null) => {
-    switch (role) {
-      case "ai-ml":
-        return "bg-purple-100 text-purple-700";
-      case "java":
-        return "bg-orange-100 text-orange-700";
-      case "vlsi":
-        return "bg-blue-100 text-blue-700";
-      case "mern":
-        return "bg-green-100 text-green-700";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
-  };
-
   if (role !== "admin") {
     return (
       <DashboardLayout>
@@ -209,19 +221,28 @@ export default function Approvals() {
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Internship Role</Label>
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <Label>Batch (Internship Role)</Label>
+                <Select value={batchFilter} onValueChange={setBatchFilter}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="ai-ml">AI-ML</SelectItem>
-                    <SelectItem value="java">Java</SelectItem>
-                    <SelectItem value="vlsi">VLSI</SelectItem>
-                    <SelectItem value="mern">MERN</SelectItem>
+                    <SelectItem value="all">All Batches</SelectItem>
+                    {batches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.name}>
+                        {batch.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Registration Date</Label>
+                <Input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
               </div>
             </div>
           </CardContent>
@@ -252,8 +273,9 @@ export default function Approvals() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Student</TableHead>
-                      <TableHead>Internship Role</TableHead>
+                      <TableHead>Email</TableHead>
                       <TableHead>Phone</TableHead>
+                      <TableHead>Batch</TableHead>
                       <TableHead>Registered</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -269,20 +291,18 @@ export default function Approvals() {
                                 {getInitials(student.profile?.full_name)}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <p className="font-medium">{student.profile?.full_name || "Unknown"}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {student.profile?.email || "No email"}
-                              </p>
-                            </div>
+                            <span className="font-medium">
+                              {student.profile?.full_name || "Unknown"}
+                            </span>
                           </div>
                         </TableCell>
+                        <TableCell>{student.profile?.email || "-"}</TableCell>
+                        <TableCell>{student.profile?.phone || "-"}</TableCell>
                         <TableCell>
-                          <Badge className={getRoleBadgeColor(student.internship_role)}>
-                            {student.internship_role?.toUpperCase() || "N/A"}
+                          <Badge variant="outline">
+                            {student.internship_role || "N/A"}
                           </Badge>
                         </TableCell>
-                        <TableCell>{student.profile?.phone || "-"}</TableCell>
                         <TableCell>
                           {format(parseISO(student.created_at), "MMM d, yyyy")}
                         </TableCell>
@@ -389,18 +409,14 @@ export default function Approvals() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Internship Role</span>
-                  <Badge className={getRoleBadgeColor(selectedStudent.internship_role)}>
-                    {selectedStudent.internship_role?.toUpperCase() || "N/A"}
+                  <span className="text-sm text-muted-foreground">Batch (Internship Role)</span>
+                  <Badge variant="outline">
+                    {selectedStudent.internship_role || "N/A"}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Skill Level</span>
                   <span className="capitalize">{selectedStudent.skill_level || "-"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Batch</span>
-                  <span>{selectedStudent.batch?.name || "-"}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">College</span>
@@ -435,6 +451,21 @@ export default function Approvals() {
                     className="mt-1 text-sm text-primary hover:underline"
                   >
                     {selectedStudent.profile.linkedin_url}
+                  </a>
+                </div>
+              )}
+
+              {selectedStudent.profile?.resume_url && (
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground">Resume</h4>
+                  <a
+                    href={selectedStudent.profile.resume_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 flex items-center gap-2 text-sm text-primary hover:underline"
+                  >
+                    <FileText className="h-4 w-4" />
+                    View Resume
                   </a>
                 </div>
               )}
