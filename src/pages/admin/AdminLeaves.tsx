@@ -74,18 +74,30 @@ export default function AdminLeaves() {
 
   const fetchRequests = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch leave requests
+      const { data: requestsData, error } = await supabase
         .from("leave_requests")
-        .select(`
-          *,
-          profile:profiles!leave_requests_user_id_fkey (full_name, email, phone),
-          student_profile:student_profiles!leave_requests_user_id_fkey (batch_id, internship_role)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setRequests((data as unknown as LeaveRequest[]) || []);
-      setFilteredRequests((data as unknown as LeaveRequest[]) || []);
+
+      // Fetch profiles and student profiles
+      const userIds = requestsData?.map(r => r.user_id) || [];
+      const [profilesRes, studentProfilesRes] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email, phone").in("id", userIds),
+        supabase.from("student_profiles").select("user_id, batch_id, internship_role").in("user_id", userIds),
+      ]);
+
+      // Merge data
+      const requestsWithProfiles = (requestsData || []).map(request => ({
+        ...request,
+        profile: profilesRes.data?.find(p => p.id === request.user_id) || null,
+        student_profile: studentProfilesRes.data?.find(sp => sp.user_id === request.user_id) || null,
+      }));
+
+      setRequests(requestsWithProfiles as unknown as LeaveRequest[]);
+      setFilteredRequests(requestsWithProfiles as unknown as LeaveRequest[]);
     } catch (error) {
       console.error("Error fetching leave requests:", error);
     } finally {

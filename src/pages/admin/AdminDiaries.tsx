@@ -55,18 +55,30 @@ export default function AdminDiaries() {
   useEffect(() => {
     const fetchDiaries = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch diary entries
+        const { data: diaryData, error } = await supabase
           .from("internship_diary")
-          .select(`
-            *,
-            profile:profiles!internship_diary_user_id_fkey (full_name, email),
-            student_profile:student_profiles!internship_diary_user_id_fkey (internship_role, student_id)
-          `)
+          .select("*")
           .order("entry_date", { ascending: false });
 
         if (error) throw error;
-        setEntries((data as unknown as DiaryEntry[]) || []);
-        setFilteredEntries((data as unknown as DiaryEntry[]) || []);
+
+        // Fetch profiles and student profiles
+        const userIds = [...new Set(diaryData?.map(d => d.user_id) || [])];
+        const [profilesRes, studentProfilesRes] = await Promise.all([
+          supabase.from("profiles").select("id, full_name, email").in("id", userIds),
+          supabase.from("student_profiles").select("user_id, internship_role, student_id").in("user_id", userIds),
+        ]);
+
+        // Merge data
+        const entriesWithProfiles = (diaryData || []).map(entry => ({
+          ...entry,
+          profile: profilesRes.data?.find(p => p.id === entry.user_id) || null,
+          student_profile: studentProfilesRes.data?.find(sp => sp.user_id === entry.user_id) || null,
+        }));
+
+        setEntries(entriesWithProfiles as unknown as DiaryEntry[]);
+        setFilteredEntries(entriesWithProfiles as unknown as DiaryEntry[]);
       } catch (error) {
         console.error("Error fetching diaries:", error);
       } finally {

@@ -1,6 +1,7 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -77,6 +78,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    full_name: string;
+    avatar_url: string | null;
+  } | null>(null);
+
+  // Fetch user profile for avatar
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (data) {
+        setUserProfile(data);
+      }
+    };
+    
+    fetchProfile();
+  }, [user]);
 
   // Get navigation items based on role
   const getNavItems = (): NavItem[] => {
@@ -185,13 +209,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="border-b p-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src="" />
+                  <AvatarImage src={userProfile?.avatar_url || ""} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
-                    {getInitials(user?.user_metadata?.full_name)}
+                    {getInitials(userProfile?.full_name || user?.user_metadata?.full_name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
-                  <p className="truncate font-medium">{user?.user_metadata?.full_name || "User"}</p>
+                  <p className="truncate font-medium">{userProfile?.full_name || user?.user_metadata?.full_name || "User"}</p>
                   <Badge 
                     variant="outline" 
                     className={cn(
@@ -246,14 +270,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenuTrigger asChild>
               <button className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-accent">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src="" />
+                  <AvatarImage src={userProfile?.avatar_url || ""} />
                   <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                    {getInitials(user?.user_metadata?.full_name)}
+                    {getInitials(userProfile?.full_name || user?.user_metadata?.full_name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                   <p className="truncate text-sm font-medium">
-                    {user?.user_metadata?.full_name || "User"}
+                    {userProfile?.full_name || user?.user_metadata?.full_name || "User"}
                   </p>
                   <Badge 
                     variant="outline" 
@@ -301,9 +325,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <span className="font-bold">FEST Interns</span>
           </div>
           <Avatar className="h-8 w-8">
-            <AvatarImage src="" />
+            <AvatarImage src={userProfile?.avatar_url || ""} />
             <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              {getInitials(user?.user_metadata?.full_name)}
+              {getInitials(userProfile?.full_name || user?.user_metadata?.full_name)}
             </AvatarFallback>
           </Avatar>
         </header>

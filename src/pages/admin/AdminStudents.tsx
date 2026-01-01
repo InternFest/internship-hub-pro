@@ -31,7 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
-import { Shield, Users, Filter, Eye } from "lucide-react";
+import { Shield, Users, Filter, Eye, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface Student {
@@ -74,32 +74,46 @@ export default function AdminStudents() {
   const [courseFilter, setCourseFilter] = useState("all");
   const [batchFilter, setBatchFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [studentsRes, batchesRes] = await Promise.all([
-          supabase
-            .from("student_profiles")
-            .select(`
-              *,
-              profile:profiles!student_profiles_user_id_fkey (
-                full_name, email, phone, avatar_url, date_of_birth, bio, linkedin_url
-              ),
-              batch:batches!fk_student_batch (name)
-            `)
-            .order("created_at", { ascending: false }),
-          supabase.from("batches").select("id, name").order("name"),
-        ]);
+        // Fetch student profiles
+        const { data: studentsData, error: studentsError } = await supabase
+          .from("student_profiles")
+          .select("*")
+          .order("created_at", { ascending: false });
 
-        if (studentsRes.error) throw studentsRes.error;
-        if (batchesRes.error) throw batchesRes.error;
+        if (studentsError) throw studentsError;
 
-        setStudents((studentsRes.data as unknown as Student[]) || []);
-        setFilteredStudents((studentsRes.data as unknown as Student[]) || []);
-        setBatches(batchesRes.data || []);
+        // Fetch profiles for all students
+        const userIds = studentsData?.map(s => s.user_id) || [];
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, phone, avatar_url, date_of_birth, bio, linkedin_url")
+          .in("id", userIds);
+
+        // Fetch batches
+        const { data: batchesData, error: batchesError } = await supabase
+          .from("batches")
+          .select("id, name")
+          .order("name");
+
+        if (batchesError) throw batchesError;
+
+        // Merge data
+        const studentsWithProfiles = (studentsData || []).map(student => ({
+          ...student,
+          profile: profilesData?.find(p => p.id === student.user_id) || null,
+          batch: batchesData?.find(b => b.id === student.batch_id) || null,
+        }));
+
+        setStudents(studentsWithProfiles as unknown as Student[]);
+        setFilteredStudents(studentsWithProfiles as unknown as Student[]);
+        setBatches(batchesData || []);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -115,6 +129,18 @@ export default function AdminStudents() {
   useEffect(() => {
     let result = students;
 
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((s) => 
+        s.profile?.full_name?.toLowerCase().includes(query) ||
+        s.profile?.email?.toLowerCase().includes(query) ||
+        s.profile?.phone?.includes(query) ||
+        s.student_id?.toLowerCase().includes(query) ||
+        s.usn?.toLowerCase().includes(query)
+      );
+    }
+
     if (courseFilter !== "all") {
       result = result.filter((s) => s.internship_role === courseFilter);
     }
@@ -128,7 +154,7 @@ export default function AdminStudents() {
     }
 
     setFilteredStudents(result);
-  }, [courseFilter, batchFilter, statusFilter, students]);
+  }, [courseFilter, batchFilter, statusFilter, searchQuery, students]);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -266,6 +292,17 @@ export default function AdminStudents() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, email, phone, student ID, or USN..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>Course</Label>

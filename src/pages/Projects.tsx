@@ -82,44 +82,61 @@ export default function Projects() {
       // Get projects where user is lead
       const { data: leadProjects, error: leadError } = await supabase
         .from("projects")
-        .select(`
-          *,
-          members:project_members (
-            id,
-            user_id,
-            profile:profiles!project_members_user_id_fkey (full_name, email, phone, avatar_url)
-          )
-        `)
+        .select("*")
         .eq("lead_id", user.id);
 
       if (leadError) throw leadError;
 
       // Get projects where user is a member
-      const { data: memberProjects, error: memberError } = await supabase
+      const { data: membershipData, error: memberError } = await supabase
         .from("project_members")
-        .select(`
-          project:projects (
-            *,
-            members:project_members (
-              id,
-              user_id,
-              profile:profiles!project_members_user_id_fkey (full_name, email, phone, avatar_url)
-            )
-          )
-        `)
+        .select("project_id")
         .eq("user_id", user.id);
 
       if (memberError) throw memberError;
 
-      const allProjects = [
-        ...(leadProjects || []),
-        ...((memberProjects || []).map((m: any) => m.project).filter(Boolean)),
-      ];
+      // Get projects from memberships
+      const projectIds = membershipData?.map(m => m.project_id) || [];
+      let memberProjects: any[] = [];
+      if (projectIds.length > 0) {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .in("id", projectIds);
+        if (!error) memberProjects = data || [];
+      }
 
-      // Remove duplicates
+      // Combine and dedupe
+      const allProjectIds = [...new Set([
+        ...(leadProjects || []).map(p => p.id),
+        ...memberProjects.map(p => p.id),
+      ])];
+
+      // Get all members for all projects
+      const { data: allMembers } = await supabase
+        .from("project_members")
+        .select("id, user_id, project_id")
+        .in("project_id", allProjectIds);
+
+      // Get profiles for members
+      const memberUserIds = [...new Set((allMembers || []).map(m => m.user_id))];
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, phone, avatar_url")
+        .in("id", memberUserIds);
+
+      // Build projects with members
+      const allProjects = [...(leadProjects || []), ...memberProjects];
       const uniqueProjects = allProjects.reduce((acc: Project[], project) => {
         if (!acc.find((p) => p.id === project.id)) {
-          acc.push(project as Project);
+          const projectMembers = (allMembers || [])
+            .filter(m => m.project_id === project.id)
+            .map(m => ({
+              id: m.id,
+              user_id: m.user_id,
+              profile: profilesData?.find(p => p.id === m.user_id) || null,
+            }));
+          acc.push({ ...project, members: projectMembers } as Project);
         }
         return acc;
       }, []);

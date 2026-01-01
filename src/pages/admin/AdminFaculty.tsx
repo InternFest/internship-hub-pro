@@ -34,22 +34,28 @@ export default function AdminFaculty() {
   useEffect(() => {
     const fetchFaculty = async () => {
       try {
-        const { data, error } = await supabase
+        // Get faculty user roles
+        const { data: rolesData, error: rolesError } = await supabase
           .from("user_roles")
-          .select(`
-            id,
-            user_id,
-            profile:profiles!user_roles_user_id_fkey (
-              full_name,
-              email,
-              phone,
-              avatar_url
-            )
-          `)
+          .select("id, user_id")
           .eq("role", "faculty");
 
-        if (error) throw error;
-        setFaculty((data as unknown as FacultyMember[]) || []);
+        if (rolesError) throw rolesError;
+
+        // Get profiles for faculty
+        const userIds = rolesData?.map(r => r.user_id) || [];
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, phone, avatar_url")
+          .in("id", userIds);
+
+        // Merge data
+        const facultyWithProfiles = (rolesData || []).map(role => ({
+          ...role,
+          profile: profilesData?.find(p => p.id === role.user_id) || null,
+        }));
+
+        setFaculty(facultyWithProfiles as unknown as FacultyMember[]);
       } catch (error) {
         console.error("Error fetching faculty:", error);
       } finally {
