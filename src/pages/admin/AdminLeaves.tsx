@@ -27,6 +27,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Shield, CalendarOff, Filter, Check, X, Loader2 } from "lucide-react";
 import { format, parseISO, isToday } from "date-fns";
 
+interface Batch {
+  id: string;
+  name: string;
+}
+
 interface LeaveRequest {
   id: string;
   leave_date: string;
@@ -43,6 +48,7 @@ interface LeaveRequest {
   } | null;
   student_profile: {
     batch_id: string | null;
+    internship_role: string | null;
   } | null;
 }
 
@@ -53,8 +59,18 @@ export default function AdminLeaves() {
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<LeaveRequest[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  
+  // Filters
   const [dateFilter, setDateFilter] = useState("all");
   const [customDate, setCustomDate] = useState("");
+  const [batchFilter, setBatchFilter] = useState("all");
+  const [courseFilter, setCourseFilter] = useState("all");
+
+  const fetchBatches = async () => {
+    const { data } = await supabase.from("batches").select("id, name");
+    setBatches(data || []);
+  };
 
   const fetchRequests = async () => {
     try {
@@ -63,7 +79,7 @@ export default function AdminLeaves() {
         .select(`
           *,
           profile:profiles!leave_requests_user_id_fkey (full_name, email, phone),
-          student_profile:student_profiles!leave_requests_user_id_fkey (batch_id)
+          student_profile:student_profiles!leave_requests_user_id_fkey (batch_id, internship_role)
         `)
         .order("created_at", { ascending: false });
 
@@ -80,20 +96,32 @@ export default function AdminLeaves() {
   useEffect(() => {
     if (role === "admin") {
       fetchRequests();
+      fetchBatches();
     }
   }, [role]);
 
   useEffect(() => {
     let result = requests;
 
+    // Date filter
     if (dateFilter === "today") {
       result = result.filter((r) => isToday(parseISO(r.leave_date)));
     } else if (dateFilter === "custom" && customDate) {
       result = result.filter((r) => r.leave_date === customDate);
     }
 
+    // Batch filter
+    if (batchFilter !== "all") {
+      result = result.filter((r) => r.student_profile?.batch_id === batchFilter);
+    }
+
+    // Course filter
+    if (courseFilter !== "all") {
+      result = result.filter((r) => r.student_profile?.internship_role === courseFilter);
+    }
+
     setFilteredRequests(result);
-  }, [dateFilter, customDate, requests]);
+  }, [dateFilter, customDate, batchFilter, courseFilter, requests]);
 
   const handleAction = async (requestId: string, approved: boolean) => {
     setProcessingId(requestId);
@@ -177,7 +205,7 @@ export default function AdminLeaves() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label>Applied Date</Label>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -202,6 +230,39 @@ export default function AdminLeaves() {
                   />
                 </div>
               )}
+
+              <div className="space-y-2">
+                <Label>Batch</Label>
+                <Select value={batchFilter} onValueChange={setBatchFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Batches</SelectItem>
+                    {batches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.id}>
+                        {batch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Course</Label>
+                <Select value={courseFilter} onValueChange={setCourseFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courses</SelectItem>
+                    <SelectItem value="vlsi">VLSI</SelectItem>
+                    <SelectItem value="ai_ml">AI/ML</SelectItem>
+                    <SelectItem value="mern">MERN</SelectItem>
+                    <SelectItem value="java">Java</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
