@@ -93,18 +93,30 @@ export default function AdminQueriesManagement() {
 
   const fetchQueries = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch queries
+      const { data: queriesData, error } = await supabase
         .from("admin_queries")
-        .select(`
-          *,
-          profile:profiles!admin_queries_user_id_fkey (full_name, email, phone),
-          student_profile:student_profiles!admin_queries_user_id_fkey (batch_id, student_id, internship_role)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setQueries((data as unknown as AdminQuery[]) || []);
-      setFilteredQueries((data as unknown as AdminQuery[]) || []);
+
+      // Fetch profiles and student profiles
+      const userIds = queriesData?.map(q => q.user_id) || [];
+      const [profilesRes, studentProfilesRes] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email, phone").in("id", userIds),
+        supabase.from("student_profiles").select("user_id, batch_id, student_id, internship_role").in("user_id", userIds),
+      ]);
+
+      // Merge data
+      const queriesWithProfiles = (queriesData || []).map(query => ({
+        ...query,
+        profile: profilesRes.data?.find(p => p.id === query.user_id) || null,
+        student_profile: studentProfilesRes.data?.find(sp => sp.user_id === query.user_id) || null,
+      }));
+
+      setQueries(queriesWithProfiles as unknown as AdminQuery[]);
+      setFilteredQueries(queriesWithProfiles as unknown as AdminQuery[]);
     } catch (error) {
       console.error("Error fetching queries:", error);
     } finally {

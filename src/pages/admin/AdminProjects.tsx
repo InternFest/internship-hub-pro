@@ -84,30 +84,66 @@ export default function AdminProjects() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projectsRes, batchesRes] = await Promise.all([
-          supabase
-            .from("projects")
-            .select(`
-              *,
-              lead_profile:profiles!projects_lead_id_fkey (full_name, email, phone),
-              lead_student:student_profiles!projects_lead_id_fkey (internship_role, batch_id),
-              members:project_members (
-                id,
-                user_id,
-                profile:profiles!project_members_user_id_fkey (full_name, email, phone),
-                student_profile:student_profiles!project_members_user_id_fkey (internship_role)
-              )
-            `)
-            .order("created_at", { ascending: false }),
-          supabase.from("batches").select("id, name").order("name"),
+        // Fetch projects
+        const { data: projectsData, error: projectsError } = await supabase
+          .from("projects")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (projectsError) throw projectsError;
+
+        // Fetch batches
+        const { data: batchesData, error: batchesError } = await supabase
+          .from("batches")
+          .select("id, name")
+          .order("name");
+
+        if (batchesError) throw batchesError;
+
+        // Fetch lead profiles and student profiles
+        const leadIds = projectsData?.map(p => p.lead_id) || [];
+        const [profilesRes, studentProfilesRes] = await Promise.all([
+          supabase.from("profiles").select("id, full_name, email, phone").in("id", leadIds),
+          supabase.from("student_profiles").select("user_id, internship_role, batch_id").in("user_id", leadIds),
         ]);
 
-        if (projectsRes.error) throw projectsRes.error;
-        if (batchesRes.error) throw batchesRes.error;
+        // Fetch project members
+        const projectIds = projectsData?.map(p => p.id) || [];
+        const { data: membersData } = await supabase
+          .from("project_members")
+          .select("id, user_id, project_id")
+          .in("project_id", projectIds);
 
-        setProjects((projectsRes.data as unknown as Project[]) || []);
-        setFilteredProjects((projectsRes.data as unknown as Project[]) || []);
-        setBatches(batchesRes.data || []);
+        // Fetch member profiles
+        const memberUserIds = [...new Set((membersData || []).map(m => m.user_id))];
+        const { data: memberProfilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, phone")
+          .in("id", memberUserIds);
+
+        const { data: memberStudentProfilesData } = await supabase
+          .from("student_profiles")
+          .select("user_id, internship_role")
+          .in("user_id", memberUserIds);
+
+        // Build projects with all data
+        const projectsWithData = (projectsData || []).map(project => ({
+          ...project,
+          lead_profile: profilesRes.data?.find(p => p.id === project.lead_id) || null,
+          lead_student: studentProfilesRes.data?.find(sp => sp.user_id === project.lead_id) || null,
+          members: (membersData || [])
+            .filter(m => m.project_id === project.id)
+            .map(m => ({
+              id: m.id,
+              user_id: m.user_id,
+              profile: memberProfilesData?.find(p => p.id === m.user_id) || null,
+              student_profile: memberStudentProfilesData?.find(sp => sp.user_id === m.user_id) || null,
+            })),
+        }));
+
+        setProjects(projectsWithData as unknown as Project[]);
+        setFilteredProjects(projectsWithData as unknown as Project[]);
+        setBatches(batchesData || []);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {

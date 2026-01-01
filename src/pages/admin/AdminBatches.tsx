@@ -76,25 +76,34 @@ export default function AdminBatches() {
 
   const fetchData = async () => {
     try {
-      const [batchesRes, facultyRes] = await Promise.all([
-        supabase.from("batches").select("*").order("created_at", { ascending: false }),
-        supabase
-          .from("user_roles")
-          .select(`
-            user_id,
-            profile:profiles!user_roles_user_id_fkey (full_name)
-          `)
-          .eq("role", "faculty"),
-      ]);
+      // Fetch batches
+      const { data: batchesData, error: batchesError } = await supabase
+        .from("batches")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (batchesRes.error) throw batchesRes.error;
-      if (facultyRes.error) throw facultyRes.error;
+      if (batchesError) throw batchesError;
 
-      setBatches(batchesRes.data || []);
+      // Fetch faculty roles
+      const { data: facultyRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "faculty");
+
+      if (rolesError) throw rolesError;
+
+      // Fetch faculty profiles
+      const facultyIds = facultyRoles?.map(f => f.user_id) || [];
+      const { data: facultyProfiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", facultyIds);
+
+      setBatches(batchesData || []);
       setFacultyOptions(
-        (facultyRes.data || []).map((f: any) => ({
-          user_id: f.user_id,
-          full_name: f.profile?.full_name || "Unknown",
+        (facultyProfiles || []).map(f => ({
+          user_id: f.id,
+          full_name: f.full_name || "Unknown",
         }))
       );
     } catch (error) {
