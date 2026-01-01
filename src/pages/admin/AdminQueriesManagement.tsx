@@ -3,8 +3,17 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,10 +31,15 @@ import {
 } from "@/components/ui/dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, MessageSquare, Check, X, Loader2, Eye } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { Shield, MessageSquare, Check, X, Loader2, Eye, Filter } from "lucide-react";
+import { format, parseISO, isToday } from "date-fns";
 
 type QueryCategory = "course" | "faculty" | "schedule" | "work" | "other";
+
+interface Batch {
+  id: string;
+  name: string;
+}
 
 interface AdminQuery {
   id: string;
@@ -43,6 +57,7 @@ interface AdminQuery {
   student_profile: {
     batch_id: string | null;
     student_id: string | null;
+    internship_role: string | null;
   } | null;
 }
 
@@ -59,9 +74,22 @@ export default function AdminQueriesManagement() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [queries, setQueries] = useState<AdminQuery[]>([]);
+  const [filteredQueries, setFilteredQueries] = useState<AdminQuery[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [selectedQuery, setSelectedQuery] = useState<AdminQuery | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [batches, setBatches] = useState<Batch[]>([]);
+
+  // Filters
+  const [dateFilter, setDateFilter] = useState("all");
+  const [customDate, setCustomDate] = useState("");
+  const [batchFilter, setBatchFilter] = useState("all");
+  const [courseFilter, setCourseFilter] = useState("all");
+
+  const fetchBatches = async () => {
+    const { data } = await supabase.from("batches").select("id, name");
+    setBatches(data || []);
+  };
 
   const fetchQueries = async () => {
     try {
@@ -70,12 +98,13 @@ export default function AdminQueriesManagement() {
         .select(`
           *,
           profile:profiles!admin_queries_user_id_fkey (full_name, email, phone),
-          student_profile:student_profiles!admin_queries_user_id_fkey (batch_id, student_id)
+          student_profile:student_profiles!admin_queries_user_id_fkey (batch_id, student_id, internship_role)
         `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       setQueries((data as unknown as AdminQuery[]) || []);
+      setFilteredQueries((data as unknown as AdminQuery[]) || []);
     } catch (error) {
       console.error("Error fetching queries:", error);
     } finally {
@@ -86,8 +115,32 @@ export default function AdminQueriesManagement() {
   useEffect(() => {
     if (role === "admin") {
       fetchQueries();
+      fetchBatches();
     }
   }, [role]);
+
+  useEffect(() => {
+    let result = queries;
+
+    // Date filter
+    if (dateFilter === "today") {
+      result = result.filter((q) => isToday(parseISO(q.created_at)));
+    } else if (dateFilter === "custom" && customDate) {
+      result = result.filter((q) => q.created_at.startsWith(customDate));
+    }
+
+    // Batch filter
+    if (batchFilter !== "all") {
+      result = result.filter((q) => q.student_profile?.batch_id === batchFilter);
+    }
+
+    // Course filter
+    if (courseFilter !== "all") {
+      result = result.filter((q) => q.student_profile?.internship_role === courseFilter);
+    }
+
+    setFilteredQueries(result);
+  }, [dateFilter, customDate, batchFilter, courseFilter, queries]);
 
   const handleResolve = async (queryId: string, resolved: boolean) => {
     setProcessingId(queryId);
@@ -185,6 +238,77 @@ export default function AdminQueriesManagement() {
           </Card>
         </div>
 
+        {/* Filters */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Filter className="h-4 w-4" />
+              Filters
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <Label>Date</Label>
+                <Select value={dateFilter} onValueChange={setDateFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Dates</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="custom">Custom Date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {dateFilter === "custom" && (
+                <div className="space-y-2">
+                  <Label>Select Date</Label>
+                  <Input
+                    type="date"
+                    value={customDate}
+                    onChange={(e) => setCustomDate(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Batch</Label>
+                <Select value={batchFilter} onValueChange={setBatchFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Batches</SelectItem>
+                    {batches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.id}>
+                        {batch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Course</Label>
+                <Select value={courseFilter} onValueChange={setCourseFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Courses</SelectItem>
+                    <SelectItem value="vlsi">VLSI</SelectItem>
+                    <SelectItem value="ai_ml">AI/ML</SelectItem>
+                    <SelectItem value="mern">MERN</SelectItem>
+                    <SelectItem value="java">Java</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Results */}
         <Card>
           <CardHeader>
@@ -192,15 +316,15 @@ export default function AdminQueriesManagement() {
               <MessageSquare className="h-5 w-5" />
               All Queries
             </CardTitle>
-            <CardDescription>{queries.length} total queries</CardDescription>
+            <CardDescription>{filteredQueries.length} queries found</CardDescription>
           </CardHeader>
           <CardContent>
-            {queries.length === 0 ? (
+            {filteredQueries.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <MessageSquare className="mb-4 h-12 w-12 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">No queries yet</h3>
                 <p className="text-muted-foreground">
-                  No student queries have been submitted.
+                  No student queries match your filters.
                 </p>
               </div>
             ) : (
@@ -217,7 +341,7 @@ export default function AdminQueriesManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {queries.map((query) => (
+                    {filteredQueries.map((query) => (
                       <TableRow key={query.id}>
                         <TableCell>
                           <div>
