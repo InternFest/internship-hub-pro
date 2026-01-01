@@ -52,8 +52,9 @@ interface Batch {
 }
 
 export default function FacultyDashboard() {
-  const { role, profile } = useAuth();
+  const { role, user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [facultyName, setFacultyName] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
