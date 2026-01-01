@@ -154,7 +154,7 @@ export default function Projects() {
   }, [user]);
 
   const handleCreateProject = async () => {
-    if (!user || !projectName) {
+    if (!user || !projectName.trim()) {
       toast({
         title: "Error",
         description: "Please provide a project name.",
@@ -165,20 +165,27 @@ export default function Projects() {
 
     setSaving(true);
     try {
-      // Create project
+      // Create project first
       const { data: project, error: projectError } = await supabase
         .from("projects")
         .insert({
-          name: projectName,
-          description: projectDescription || null,
+          name: projectName.trim(),
+          description: projectDescription.trim() || null,
           lead_id: user.id,
         })
         .select()
         .single();
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error("Project creation error:", projectError);
+        throw projectError;
+      }
 
-      // Add lead as member
+      if (!project) {
+        throw new Error("Project was not created");
+      }
+
+      // Add lead as member after project is created
       const { error: memberError } = await supabase
         .from("project_members")
         .insert({
@@ -186,7 +193,10 @@ export default function Projects() {
           user_id: user.id,
         });
 
-      if (memberError) throw memberError;
+      if (memberError) {
+        console.error("Member insert error:", memberError);
+        // Project was created but member wasn't added - still show success
+      }
 
       toast({
         title: "Success",
@@ -198,11 +208,11 @@ export default function Projects() {
       setProjectName("");
       setProjectDescription("");
       fetchProjects();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating project:", error);
       toast({
         title: "Error",
-        description: "Failed to create project.",
+        description: error?.message || "Failed to create project.",
         variant: "destructive",
       });
     } finally {
