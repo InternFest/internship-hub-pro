@@ -149,7 +149,7 @@ export default function FacultyDashboard() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold md:text-3xl">
-            Welcome, {profile?.full_name || "Faculty"}! 👋
+            Welcome, {facultyName || "Faculty"}! 👋
           </h1>
           <p className="text-muted-foreground">View student progress and activities.</p>
         </div>
