@@ -183,8 +183,8 @@ export default function Approvals() {
   if (role !== "admin") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
+          <Shield className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
             Only administrators can access this page.
@@ -205,13 +205,13 @@ export default function Approvals() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
+        <div className="fade-in">
           <h1 className="text-2xl font-bold md:text-3xl">Student Approvals</h1>
           <p className="text-muted-foreground">Review and approve pending student registrations.</p>
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="h-4 w-4" />
@@ -248,7 +248,7 @@ export default function Approvals() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="slide-up" style={{ animationDelay: '0.1s' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -260,8 +260,8 @@ export default function Approvals() {
           </CardHeader>
           <CardContent>
             {filteredStudents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Shield className="mb-4 h-12 w-12 text-success" />
+              <div className="flex flex-col items-center justify-center py-12 fade-in">
+                <Shield className="mb-4 h-12 w-12 text-success bounce-in" />
                 <h3 className="text-lg font-semibold">All caught up!</h3>
                 <p className="text-muted-foreground">
                   No pending approvals at the moment.
@@ -281,8 +281,8 @@ export default function Approvals() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredStudents.map((student) => (
-                      <TableRow key={student.id}>
+                    {filteredStudents.map((student, index) => (
+                      <TableRow key={student.id} className="slide-up transition-smooth hover:bg-muted/50" style={{ animationDelay: `${index * 0.05}s` }}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
@@ -321,7 +321,7 @@ export default function Approvals() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="text-destructive hover:bg-destructive/10"
+                              className="text-destructive hover:bg-destructive/10 transition-smooth"
                               onClick={() => handleApproval(student.id, false)}
                               disabled={processingId === student.id}
                             >
@@ -334,6 +334,7 @@ export default function Approvals() {
                             <Button
                               size="sm"
                               variant="default"
+                              className="transition-smooth"
                               onClick={() => handleApproval(student.id, true)}
                               disabled={processingId === student.id}
                             >
@@ -358,9 +359,8 @@ export default function Approvals() {
         </Card>
       </div>
 
-      {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto scale-in">
           <DialogHeader>
             <DialogTitle>Student Details</DialogTitle>
             <DialogDescription>Complete student profile information</DialogDescription>
