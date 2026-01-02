@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, CalendarOff, Filter, Check, X, Loader2 } from "lucide-react";
+import { Shield, CalendarOff, Filter, Check, X, Loader2, Users, GraduationCap } from "lucide-react";
 import { format, parseISO, isToday } from "date-fns";
 
 interface Batch {
@@ -41,6 +41,7 @@ interface LeaveRequest {
   status: "pending" | "approved" | "rejected";
   created_at: string;
   user_id: string;
+  user_role: "student" | "faculty";
   profile: {
     full_name: string;
     email: string;
@@ -65,7 +66,7 @@ export default function AdminLeaves() {
   const [dateFilter, setDateFilter] = useState("all");
   const [customDate, setCustomDate] = useState("");
   const [batchFilter, setBatchFilter] = useState("all");
-  const [courseFilter, setCourseFilter] = useState("all");
+  const [userTypeFilter, setUserTypeFilter] = useState("all");
 
   const fetchBatches = async () => {
     const { data } = await supabase.from("batches").select("id, name");
@@ -84,17 +85,22 @@ export default function AdminLeaves() {
 
       // Fetch profiles and student profiles
       const userIds = requestsData?.map(r => r.user_id) || [];
-      const [profilesRes, studentProfilesRes] = await Promise.all([
+      const [profilesRes, studentProfilesRes, userRolesRes] = await Promise.all([
         supabase.from("profiles").select("id, full_name, email, phone").in("id", userIds),
         supabase.from("student_profiles").select("user_id, batch_id, internship_role").in("user_id", userIds),
+        supabase.from("user_roles").select("user_id, role").in("user_id", userIds),
       ]);
 
       // Merge data
-      const requestsWithProfiles = (requestsData || []).map(request => ({
-        ...request,
-        profile: profilesRes.data?.find(p => p.id === request.user_id) || null,
-        student_profile: studentProfilesRes.data?.find(sp => sp.user_id === request.user_id) || null,
-      }));
+      const requestsWithProfiles = (requestsData || []).map(request => {
+        const userRole = userRolesRes.data?.find(r => r.user_id === request.user_id);
+        return {
+          ...request,
+          profile: profilesRes.data?.find(p => p.id === request.user_id) || null,
+          student_profile: studentProfilesRes.data?.find(sp => sp.user_id === request.user_id) || null,
+          user_role: userRole?.role || "student",
+        };
+      });
 
       setRequests(requestsWithProfiles as unknown as LeaveRequest[]);
       setFilteredRequests(requestsWithProfiles as unknown as LeaveRequest[]);
@@ -115,6 +121,11 @@ export default function AdminLeaves() {
   useEffect(() => {
     let result = requests;
 
+    // User type filter
+    if (userTypeFilter !== "all") {
+      result = result.filter((r) => r.user_role === userTypeFilter);
+    }
+
     // Date filter
     if (dateFilter === "today") {
       result = result.filter((r) => isToday(parseISO(r.leave_date)));
@@ -122,18 +133,13 @@ export default function AdminLeaves() {
       result = result.filter((r) => r.leave_date === customDate);
     }
 
-    // Batch filter
+    // Batch filter (only for students)
     if (batchFilter !== "all") {
-      result = result.filter((r) => r.student_profile?.batch_id === batchFilter);
-    }
-
-    // Course filter
-    if (courseFilter !== "all") {
-      result = result.filter((r) => r.student_profile?.internship_role === courseFilter);
+      result = result.filter((r) => r.student_profile?.internship_role === batchFilter);
     }
 
     setFilteredRequests(result);
-  }, [dateFilter, customDate, batchFilter, courseFilter, requests]);
+  }, [dateFilter, customDate, batchFilter, userTypeFilter, requests]);
 
   const handleAction = async (requestId: string, approved: boolean) => {
     setProcessingId(requestId);
@@ -178,10 +184,32 @@ export default function AdminLeaves() {
     }
   };
 
+  const getUserTypeBadge = (userRole: string) => {
+    if (userRole === "faculty") {
+      return (
+        <Badge className="bg-accent/10 text-accent">
+          <Users className="mr-1 h-3 w-3" />
+          Faculty
+        </Badge>
+      );
+    }
+    return (
+      <Badge className="bg-primary/10 text-primary">
+        <GraduationCap className="mr-1 h-3 w-3" />
+        Student
+      </Badge>
+    );
+  };
+
+  // Stats
+  const studentRequests = requests.filter(r => r.user_role === "student");
+  const facultyRequests = requests.filter(r => r.user_role === "faculty");
+  const pendingRequests = requests.filter(r => r.status === "pending");
+
   if (role !== "admin") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
           <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
@@ -203,13 +231,61 @@ export default function AdminLeaves() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
+        <div className="fade-in">
           <h1 className="text-2xl font-bold md:text-3xl">Leave Requests</h1>
-          <p className="text-muted-foreground">Manage all student leave requests.</p>
+          <p className="text-muted-foreground">Manage all leave requests from students and faculty.</p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 fade-in">
+          <Card className="card-hover">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <CalendarOff className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{requests.length}</p>
+                <p className="text-sm text-muted-foreground">Total Requests</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="card-hover">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
+                <CalendarOff className="h-6 w-6 text-warning" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{pendingRequests.length}</p>
+                <p className="text-sm text-muted-foreground">Pending</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="card-hover">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                <GraduationCap className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{studentRequests.length}</p>
+                <p className="text-sm text-muted-foreground">Student Requests</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="card-hover">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
+                <Users className="h-6 w-6 text-accent" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{facultyRequests.length}</p>
+                <p className="text-sm text-muted-foreground">Faculty Requests</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="h-4 w-4" />
@@ -218,6 +294,20 @@ export default function AdminLeaves() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2">
+                <Label>User Type</Label>
+                <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="student">Students Only</SelectItem>
+                    <SelectItem value="faculty">Faculty Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label>Applied Date</Label>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
@@ -244,7 +334,7 @@ export default function AdminLeaves() {
               )}
 
               <div className="space-y-2">
-                <Label>Batch</Label>
+                <Label>Batch (Students)</Label>
                 <Select value={batchFilter} onValueChange={setBatchFilter}>
                   <SelectTrigger>
                     <SelectValue />
@@ -252,26 +342,10 @@ export default function AdminLeaves() {
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
                     {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.id}>
+                      <SelectItem key={batch.id} value={batch.name}>
                         {batch.name}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Course</Label>
-                <Select value={courseFilter} onValueChange={setCourseFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Courses</SelectItem>
-                    <SelectItem value="vlsi">VLSI</SelectItem>
-                    <SelectItem value="ai_ml">AI/ML</SelectItem>
-                    <SelectItem value="mern">MERN</SelectItem>
-                    <SelectItem value="java">Java</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -280,7 +354,7 @@ export default function AdminLeaves() {
         </Card>
 
         {/* Results */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarOff className="h-5 w-5" />
@@ -292,7 +366,7 @@ export default function AdminLeaves() {
           </CardHeader>
           <CardContent>
             {filteredRequests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex flex-col items-center justify-center py-12 fade-in">
                 <CalendarOff className="mb-4 h-12 w-12 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">No leave requests</h3>
                 <p className="text-muted-foreground">
@@ -304,18 +378,19 @@ export default function AdminLeaves() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Student</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Type</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Leave Date</TableHead>
-                      <TableHead>Type</TableHead>
+                      <TableHead>Leave Type</TableHead>
                       <TableHead>Reason</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredRequests.map((request) => (
-                      <TableRow key={request.id}>
+                    {filteredRequests.map((request, index) => (
+                      <TableRow key={request.id} className="slide-up" style={{ animationDelay: `${index * 0.03}s` }}>
                         <TableCell>
                           <div>
                             <p className="font-medium">{request.profile?.full_name}</p>
@@ -324,6 +399,7 @@ export default function AdminLeaves() {
                             </p>
                           </div>
                         </TableCell>
+                        <TableCell>{getUserTypeBadge(request.user_role)}</TableCell>
                         <TableCell>{request.profile?.phone || "-"}</TableCell>
                         <TableCell>
                           {format(parseISO(request.leave_date), "MMM d, yyyy")}
@@ -343,7 +419,7 @@ export default function AdminLeaves() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-destructive hover:bg-destructive/10"
+                                className="text-destructive hover:bg-destructive/10 transition-smooth"
                                 onClick={() => handleAction(request.id, false)}
                                 disabled={processingId === request.id}
                               >
@@ -358,6 +434,7 @@ export default function AdminLeaves() {
                                 variant="default"
                                 onClick={() => handleAction(request.id, true)}
                                 disabled={processingId === request.id}
+                                className="transition-smooth"
                               >
                                 {processingId === request.id ? (
                                   <Loader2 className="h-4 w-4 animate-spin" />

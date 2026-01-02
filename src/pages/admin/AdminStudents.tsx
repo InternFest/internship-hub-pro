@@ -206,14 +206,14 @@ export default function AdminStudents() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
+        <div className="fade-in">
           <h1 className="text-2xl font-bold md:text-3xl">Students Management</h1>
           <p className="text-muted-foreground">View and manage all students.</p>
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 fade-in">
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                 <Users className="h-6 w-6 text-primary" />
@@ -224,7 +224,7 @@ export default function AdminStudents() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
                 <Users className="h-6 w-6 text-success" />
@@ -235,7 +235,7 @@ export default function AdminStudents() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
                 <Users className="h-6 w-6 text-warning" />
@@ -264,7 +264,7 @@ export default function AdminStudents() {
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="h-4 w-4" />
@@ -320,7 +320,7 @@ export default function AdminStudents() {
         </Card>
 
         {/* Students Table */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
@@ -354,8 +354,8 @@ export default function AdminStudents() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredStudents.map((student) => (
-                      <TableRow key={student.id}>
+                    {filteredStudents.map((student, index) => (
+                      <TableRow key={student.id} className="slide-up transition-smooth hover:bg-muted/50" style={{ animationDelay: `${index * 0.03}s` }}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
@@ -406,7 +406,7 @@ export default function AdminStudents() {
 
       {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto scale-in">
           <DialogHeader>
             <DialogTitle>Student Details</DialogTitle>
             <DialogDescription>Complete student profile information</DialogDescription>
@@ -504,14 +504,26 @@ export default function AdminStudents() {
               {selectedStudent.profile?.resume_url && (
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground">Resume</h4>
-                  <a
-                    href={selectedStudent.profile.resume_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 text-sm text-primary hover:underline"
+                  <Button
+                    variant="link"
+                    className="mt-1 h-auto p-0 text-sm text-primary hover:underline"
+                    onClick={async () => {
+                      if (!selectedStudent.profile?.resume_url) return;
+                      try {
+                        const { data, error } = await supabase.storage
+                          .from("resumes")
+                          .createSignedUrl(selectedStudent.profile.resume_url, 60 * 60);
+                        if (error) throw error;
+                        if (data?.signedUrl) {
+                          window.open(data.signedUrl, "_blank");
+                        }
+                      } catch (err) {
+                        console.error("Error getting resume URL:", err);
+                      }
+                    }}
                   >
                     View Resume
-                  </a>
+                  </Button>
                 </div>
               )}
 

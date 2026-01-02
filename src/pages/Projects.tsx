@@ -27,9 +27,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, FolderKanban, Lock, Users, Crown, UserPlus, Search } from "lucide-react";
+import { Loader2, Plus, FolderKanban, Lock, Users, Crown, UserPlus, Search, LogIn } from "lucide-react";
 
 interface ProjectMember {
   id: string;
@@ -49,6 +57,10 @@ interface Project {
   lead_id: string;
   created_at: string;
   members: ProjectMember[];
+  lead_profile?: {
+    full_name: string;
+    email: string;
+  } | null;
 }
 
 export default function Projects() {
@@ -57,8 +69,10 @@ export default function Projects() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
   const [isLead, setIsLead] = useState<boolean | null>(null);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -70,6 +84,7 @@ export default function Projects() {
   } | null>(null);
   const [searching, setSearching] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
+  const [joiningProject, setJoiningProject] = useState<string | null>(null);
 
   // Form state
   const [projectName, setProjectName] = useState("");
@@ -113,21 +128,29 @@ export default function Projects() {
       ])];
 
       // Get all members for all projects
-      const { data: allMembers } = await supabase
-        .from("project_members")
-        .select("id, user_id, project_id")
-        .in("project_id", allProjectIds);
+      let allMembers: any[] = [];
+      if (allProjectIds.length > 0) {
+        const { data } = await supabase
+          .from("project_members")
+          .select("id, user_id, project_id")
+          .in("project_id", allProjectIds);
+        allMembers = data || [];
+      }
 
       // Get profiles for members
       const memberUserIds = [...new Set((allMembers || []).map(m => m.user_id))];
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, phone, avatar_url")
-        .in("id", memberUserIds);
+      let profilesData: any[] = [];
+      if (memberUserIds.length > 0) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, full_name, email, phone, avatar_url")
+          .in("id", memberUserIds);
+        profilesData = data || [];
+      }
 
       // Build projects with members
-      const allProjects = [...(leadProjects || []), ...memberProjects];
-      const uniqueProjects = allProjects.reduce((acc: Project[], project) => {
+      const allProjectsData = [...(leadProjects || []), ...memberProjects];
+      const uniqueProjects = allProjectsData.reduce((acc: Project[], project) => {
         if (!acc.find((p) => p.id === project.id)) {
           const projectMembers = (allMembers || [])
             .filter(m => m.project_id === project.id)
@@ -146,6 +169,57 @@ export default function Projects() {
       console.error("Error fetching projects:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllProjects = async () => {
+    if (!user) return;
+
+    try {
+      // Get all projects for joining
+      const { data: projectsData, error } = await supabase
+        .from("projects")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Get all members
+      const projectIds = projectsData?.map(p => p.id) || [];
+      let allMembers: any[] = [];
+      if (projectIds.length > 0) {
+        const { data } = await supabase
+          .from("project_members")
+          .select("id, user_id, project_id")
+          .in("project_id", projectIds);
+        allMembers = data || [];
+      }
+
+      // Get lead profiles
+      const leadIds = [...new Set(projectsData?.map(p => p.lead_id) || [])];
+      let leadProfiles: any[] = [];
+      if (leadIds.length > 0) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", leadIds);
+        leadProfiles = data || [];
+      }
+
+      // Filter out projects where user is already a member or lead
+      const userProjectIds = new Set(allMembers.filter(m => m.user_id === user.id).map(m => m.project_id));
+      
+      const availableProjects = (projectsData || [])
+        .filter(p => !userProjectIds.has(p.id) && p.lead_id !== user.id)
+        .map(p => ({
+          ...p,
+          members: allMembers.filter(m => m.project_id === p.id),
+          lead_profile: leadProfiles.find(lp => lp.id === p.lead_id) || null,
+        }));
+
+      setAllProjects(availableProjects as Project[]);
+    } catch (error) {
+      console.error("Error fetching all projects:", error);
     }
   };
 
@@ -195,7 +269,6 @@ export default function Projects() {
 
       if (memberError) {
         console.error("Member insert error:", memberError);
-        // Project was created but member wasn't added - still show success
       }
 
       toast({
@@ -217,6 +290,40 @@ export default function Projects() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleJoinProject = async (projectId: string) => {
+    if (!user) return;
+
+    setJoiningProject(projectId);
+    try {
+      const { error } = await supabase
+        .from("project_members")
+        .insert({
+          project_id: projectId,
+          user_id: user.id,
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "You have joined the project successfully!",
+      });
+
+      setJoinDialogOpen(false);
+      fetchProjects();
+      fetchAllProjects();
+    } catch (error) {
+      console.error("Error joining project:", error);
+      toast({
+        title: "Error",
+        description: "Failed to join project.",
+        variant: "destructive",
+      });
+    } finally {
+      setJoiningProject(null);
     }
   };
 
@@ -333,7 +440,7 @@ export default function Projects() {
   if (studentStatus !== "approved") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
           <Lock className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="text-muted-foreground">
@@ -355,7 +462,7 @@ export default function Projects() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between fade-in">
           <div>
             <h1 className="text-2xl font-bold md:text-3xl">Projects</h1>
             <p className="text-muted-foreground">Manage your team projects.</p>
@@ -370,12 +477,12 @@ export default function Projects() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button onClick={() => setConfirmOpen(true)}>
+              <Button onClick={() => setConfirmOpen(true)} className="transition-smooth hover:scale-105">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Project
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="scale-in">
               <DialogHeader>
                 <DialogTitle>Create New Project</DialogTitle>
                 <DialogDescription>
@@ -426,7 +533,7 @@ export default function Projects() {
 
           {/* Lead Confirmation Dialog */}
           <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-            <AlertDialogContent>
+            <AlertDialogContent className="scale-in">
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you the project lead?</AlertDialogTitle>
                 <AlertDialogDescription>
@@ -435,7 +542,13 @@ export default function Projects() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>No, I'm joining a team</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => {
+                  setConfirmOpen(false);
+                  fetchAllProjects();
+                  setJoinDialogOpen(true);
+                }}>
+                  No, I'm joining a team
+                </AlertDialogCancel>
                 <AlertDialogAction onClick={() => {
                   setConfirmOpen(false);
                   setIsLead(true);
@@ -446,18 +559,101 @@ export default function Projects() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Join Team Dialog */}
+          <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto scale-in">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Join a Team
+                </DialogTitle>
+                <DialogDescription>
+                  Browse available projects and join a team.
+                </DialogDescription>
+              </DialogHeader>
+
+              {allProjects.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <FolderKanban className="mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">No Available Projects</h3>
+                  <p className="text-muted-foreground text-center">
+                    There are no projects available to join at the moment.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Project ID</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Team Lead</TableHead>
+                        <TableHead>Team Size</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {allProjects.map((project, index) => (
+                        <TableRow key={project.id} className="slide-up" style={{ animationDelay: `${index * 0.05}s` }}>
+                          <TableCell>
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {project.id.slice(0, 8)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">{project.name}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {project.description || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Crown className="h-3 w-3 text-primary" />
+                              {project.lead_profile?.full_name || "Unknown"}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {project.members?.length || 1}/5
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              size="sm"
+                              onClick={() => handleJoinProject(project.id)}
+                              disabled={joiningProject === project.id || (project.members?.length || 0) >= 5}
+                              className="transition-smooth hover:scale-105"
+                            >
+                              {joiningProject === project.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <LogIn className="mr-1 h-3 w-3" />
+                                  Join
+                                </>
+                              )}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Projects List */}
         {projects.length === 0 ? (
-          <Card>
+          <Card className="fade-in card-hover">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <FolderKanban className="mb-4 h-12 w-12 text-muted-foreground" />
               <h3 className="text-lg font-semibold">No projects yet</h3>
               <p className="mb-4 text-muted-foreground">
                 Create your first project or join an existing team.
               </p>
-              <Button onClick={() => setConfirmOpen(true)}>
+              <Button onClick={() => setConfirmOpen(true)} className="transition-smooth hover:scale-105">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Project
               </Button>
@@ -465,10 +661,10 @@ export default function Projects() {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {projects.map((project) => {
+            {projects.map((project, index) => {
               const isLeader = project.lead_id === user?.id;
               return (
-                <Card key={project.id}>
+                <Card key={project.id} className="card-hover slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
@@ -504,6 +700,7 @@ export default function Projects() {
                               setSelectedProjectId(project.id);
                               setAddMemberDialogOpen(true);
                             }}
+                            className="transition-smooth hover:scale-105"
                           >
                             <UserPlus className="mr-1 h-3 w-3" />
                             Add
@@ -514,7 +711,7 @@ export default function Projects() {
                         {project.members.map((member) => (
                           <div
                             key={member.id}
-                            className="flex items-center gap-2 rounded-lg border bg-muted/50 px-2 py-1"
+                            className="flex items-center gap-2 rounded-lg border bg-muted/50 px-2 py-1 transition-smooth hover:bg-muted"
                           >
                             <Avatar className="h-6 w-6">
                               <AvatarImage src={member.profile?.avatar_url || ""} />
@@ -546,7 +743,7 @@ export default function Projects() {
           setSearchResult(null);
         }
       }}>
-        <DialogContent>
+        <DialogContent className="scale-in">
           <DialogHeader>
             <DialogTitle>Add Team Member</DialogTitle>
             <DialogDescription>
@@ -571,13 +768,13 @@ export default function Projects() {
             </div>
 
             {searchResult && (
-              <Card>
+              <Card className="fade-in">
                 <CardContent className="flex items-center justify-between p-4">
                   <div>
                     <p className="font-medium">{searchResult.full_name}</p>
                     <p className="text-sm text-muted-foreground">{searchResult.email}</p>
                   </div>
-                  <Button onClick={handleAddMember} disabled={addingMember}>
+                  <Button onClick={handleAddMember} disabled={addingMember} className="transition-smooth hover:scale-105">
                     {addingMember ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
