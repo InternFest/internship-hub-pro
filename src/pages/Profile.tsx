@@ -346,14 +346,14 @@ export default function Profile() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
+        <div className="fade-in">
           <h1 className="text-2xl font-bold md:text-3xl">Profile</h1>
           <p className="text-muted-foreground">Manage your personal information and settings.</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left Column - Avatar & Status */}
-          <Card>
+          <Card className="slide-up card-hover">
             <CardContent className="flex flex-col items-center pt-6">
               <div className="relative mb-4">
                 <Avatar className="h-24 w-24">
@@ -405,7 +405,7 @@ export default function Profile() {
           </Card>
 
           {/* Right Column - Form */}
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 slide-up" style={{ animationDelay: '0.1s' }}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -587,7 +587,7 @@ export default function Profile() {
               )}
 
               <div className="flex justify-end">
-                <Button onClick={handleSave} disabled={saving}>
+                <Button onClick={handleSave} disabled={saving} className="transition-smooth hover:scale-105 active-press">
                   {saving ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

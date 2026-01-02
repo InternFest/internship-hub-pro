@@ -216,8 +216,8 @@ export default function InternshipDiary() {
   if (studentStatus !== "approved") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Lock className="mb-4 h-12 w-12 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
+          <Lock className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="text-muted-foreground">
             This feature is available after your profile is approved.
@@ -238,7 +238,7 @@ export default function InternshipDiary() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between fade-in">
           <div>
             <h1 className="text-2xl font-bold md:text-3xl">Internship Diary</h1>
             <p className="text-muted-foreground">Track your daily work and learnings.</p>
@@ -252,12 +252,12 @@ export default function InternshipDiary() {
             }
           }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="transition-smooth hover:scale-105 active-press">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Entry
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-lg scale-in">
               <DialogHeader>
                 <DialogTitle>
                   {editingEntry ? "Edit Diary Entry" : "New Diary Entry"}
@@ -381,7 +381,7 @@ export default function InternshipDiary() {
 
         {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
+          <Card className="card-hover slide-up stagger-1">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                 <BookOpen className="h-6 w-6 text-primary" />
@@ -393,7 +393,7 @@ export default function InternshipDiary() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="card-hover slide-up stagger-2">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
                 <Clock className="h-6 w-6 text-accent" />
@@ -405,7 +405,7 @@ export default function InternshipDiary() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="card-hover slide-up stagger-3">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
                 <Calendar className="h-6 w-6 text-success" />
@@ -420,14 +420,14 @@ export default function InternshipDiary() {
 
         {/* Entries by Week */}
         {Object.keys(entriesByWeek).length === 0 ? (
-          <Card>
+          <Card className="fade-in">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <BookOpen className="mb-4 h-12 w-12 text-muted-foreground" />
+              <BookOpen className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
               <h3 className="text-lg font-semibold">No entries yet</h3>
               <p className="mb-4 text-muted-foreground">
                 Start tracking your internship by adding your first entry.
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button onClick={() => setDialogOpen(true)} className="transition-smooth hover:scale-105">
                 <Plus className="mr-2 h-4 w-4" />
                 Add Your First Entry
               </Button>

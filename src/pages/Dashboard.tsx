@@ -244,14 +244,14 @@ export default function Dashboard() {
       <DashboardLayout>
         <div className="space-y-6">
           {/* Welcome Section */}
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between fade-in">
             <div>
               <h1 className="text-2xl font-bold md:text-3xl">
                 Welcome back, {user?.user_metadata?.full_name?.split(" ")[0]}!
               </h1>
               <p className="text-muted-foreground">Here's an overview of your internship progress.</p>
             </div>
-            <Badge variant="outline" className="w-fit bg-success/10 text-success">
+            <Badge variant="outline" className="w-fit bg-success/10 text-success bounce-in">
               <CheckCircle className="mr-1 h-3 w-3" />
               Approved
             </Badge>
@@ -259,7 +259,7 @@ export default function Dashboard() {
 
           {/* Stats Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-1">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Student ID
@@ -274,7 +274,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-2">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Diary Entries
@@ -287,7 +287,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-3">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Projects
@@ -300,7 +300,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-4">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Leave Requests
@@ -315,7 +315,7 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Actions */}
-          <Card>
+          <Card className="slide-up" style={{ animationDelay: '0.3s' }}>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Common tasks you might want to do</CardDescription>
@@ -323,28 +323,28 @@ export default function Dashboard() {
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <a
                 href="/diary"
-                className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-accent"
+                className="flex items-center gap-3 rounded-lg border p-4 transition-smooth hover:bg-accent hover:scale-[1.02] hover:shadow-md active-press"
               >
                 <BookOpen className="h-5 w-5 text-primary" />
                 <span className="font-medium">Add Diary Entry</span>
               </a>
               <a
                 href="/projects"
-                className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-accent"
+                className="flex items-center gap-3 rounded-lg border p-4 transition-smooth hover:bg-accent hover:scale-[1.02] hover:shadow-md active-press"
               >
                 <FolderKanban className="h-5 w-5 text-primary" />
                 <span className="font-medium">View Projects</span>
               </a>
               <a
                 href="/leaves"
-                className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-accent"
+                className="flex items-center gap-3 rounded-lg border p-4 transition-smooth hover:bg-accent hover:scale-[1.02] hover:shadow-md active-press"
               >
                 <CalendarOff className="h-5 w-5 text-primary" />
                 <span className="font-medium">Request Leave</span>
               </a>
               <a
                 href="/profile"
-                className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-accent"
+                className="flex items-center gap-3 rounded-lg border p-4 transition-smooth hover:bg-accent hover:scale-[1.02] hover:shadow-md active-press"
               >
                 <GraduationCap className="h-5 w-5 text-primary" />
                 <span className="font-medium">Update Profile</span>
@@ -361,14 +361,14 @@ export default function Dashboard() {
     return (
       <DashboardLayout>
         <div className="space-y-6">
-          <div>
+          <div className="fade-in">
             <h1 className="text-2xl font-bold md:text-3xl">Faculty Dashboard</h1>
             <p className="text-muted-foreground">Monitor student progress and internship activities.</p>
           </div>
 
-          <Card>
+          <Card className="slide-up card-hover">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <Users className="mb-4 h-12 w-12 text-muted-foreground" />
+              <Users className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
               <h3 className="text-lg font-semibold">Read-Only Access</h3>
               <p className="text-center text-muted-foreground">
                 As faculty, you can view student profiles, diaries, projects, and leave requests.
@@ -385,14 +385,14 @@ export default function Dashboard() {
     return (
       <DashboardLayout>
         <div className="space-y-6">
-          <div>
+          <div className="fade-in">
             <h1 className="text-2xl font-bold md:text-3xl">Admin Dashboard</h1>
             <p className="text-muted-foreground">Manage students, faculty, and platform settings.</p>
           </div>
 
           {/* Stats Grid */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-1">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Pending Approvals
@@ -404,7 +404,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-2">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Total Students
@@ -416,7 +416,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-3">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Faculty
@@ -428,7 +428,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-4">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Pending Leaves
@@ -440,7 +440,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover">
+            <Card className="card-hover slide-up stagger-5">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Open Queries
@@ -454,14 +454,14 @@ export default function Dashboard() {
           </div>
 
           {/* Batch-wise Stats */}
-          <Card>
+          <Card className="slide-up" style={{ animationDelay: '0.35s' }}>
             <CardHeader>
               <CardTitle>Batch-wise Student Statistics</CardTitle>
               <CardDescription>Students enrolled by internship track</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="flex items-center gap-4 rounded-lg border p-4">
+                <div className="flex items-center gap-4 rounded-lg border p-4 transition-smooth hover:shadow-md hover:border-primary/20">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
                     <span className="font-bold">V</span>
                   </div>
