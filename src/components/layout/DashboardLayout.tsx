@@ -55,7 +55,8 @@ const facultyNavItems: NavItem[] = [
   { title: "Students", href: "/students", icon: Users },
   { title: "Internship Diaries", href: "/view-diaries", icon: BookOpen },
   { title: "Projects", href: "/view-projects", icon: FolderKanban },
-  { title: "Leave Requests", href: "/view-leaves", icon: CalendarOff },
+  { title: "Student Leaves", href: "/view-leaves", icon: CalendarOff },
+  { title: "My Leave Requests", href: "/faculty-leaves", icon: CalendarOff },
 ];
 
 const adminNavItems: NavItem[] = [

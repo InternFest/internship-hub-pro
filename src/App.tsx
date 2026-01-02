@@ -17,6 +17,7 @@ import AdminQueries from "./pages/AdminQueries";
 import Approvals from "./pages/Approvals";
 import Projects from "./pages/Projects";
 import FacultyDashboard from "./pages/faculty/FacultyDashboard";
+import FacultyLeaveRequests from "./pages/faculty/FacultyLeaveRequests";
 import AdminStudents from "./pages/admin/AdminStudents";
 import AdminFaculty from "./pages/admin/AdminFaculty";
 import AdminBatches from "./pages/admin/AdminBatches";
@@ -160,6 +161,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminLeaves />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/faculty-leaves"
+        element={
+          <ProtectedRoute>
+            <FacultyLeaveRequests />
           </ProtectedRoute>
         }
       />

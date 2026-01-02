@@ -33,8 +33,8 @@ import {
 } from "@/components/ui/table";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Shield, FolderKanban, Pencil, Calendar } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { Loader2, Plus, Shield, FolderKanban, Pencil, Calendar, Clock, CheckCircle, PlayCircle } from "lucide-react";
+import { format, parseISO, isAfter, isBefore, isEqual } from "date-fns";
 
 interface FacultyOption {
   user_id: string;
@@ -195,6 +195,28 @@ export default function AdminBatches() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const getBatchStatus = (batch: Batch) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = parseISO(batch.start_date);
+    const endDate = parseISO(batch.end_date);
+    
+    if (isBefore(today, startDate)) {
+      return { label: "Yet to Start", color: "bg-warning/10 text-warning", icon: Clock };
+    } else if (isAfter(today, endDate)) {
+      return { label: "Completed", color: "bg-muted text-muted-foreground", icon: CheckCircle };
+    } else {
+      return { label: "Ongoing", color: "bg-success/10 text-success", icon: PlayCircle };
+    }
+  };
+
+  const isBatchCompleted = (batch: Batch) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endDate = parseISO(batch.end_date);
+    return isAfter(today, endDate);
   };
 
   if (role !== "admin") {
@@ -386,6 +408,7 @@ export default function AdminBatches() {
                     <TableRow>
                       <TableHead>Batch Name</TableHead>
                       <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Strength</TableHead>
                       <TableHead>Timings</TableHead>
                       <TableHead>Faculty</TableHead>
@@ -397,6 +420,9 @@ export default function AdminBatches() {
                       const faculty = facultyOptions.find(
                         (f) => f.user_id === batch.assigned_faculty_id
                       );
+                      const status = getBatchStatus(batch);
+                      const StatusIcon = status.icon;
+                      const isCompleted = isBatchCompleted(batch);
                       return (
                         <TableRow key={batch.id}>
                           <TableCell>
@@ -417,6 +443,12 @@ export default function AdminBatches() {
                             </div>
                           </TableCell>
                           <TableCell>
+                            <Badge className={status.color}>
+                              <StatusIcon className="mr-1 h-3 w-3" />
+                              {status.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
                             <Badge variant="outline">
                               {batch.batch_strength || "-"} students
                             </Badge>
@@ -424,13 +456,15 @@ export default function AdminBatches() {
                           <TableCell>{batch.batch_timings || "-"}</TableCell>
                           <TableCell>{faculty?.full_name || "-"}</TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditDialog(batch)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            {!isCompleted && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(batch)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
