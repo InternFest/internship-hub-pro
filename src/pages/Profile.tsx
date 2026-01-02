@@ -511,28 +511,35 @@ export default function Profile() {
 
                       <div className="space-y-2">
                         <Label htmlFor="internshipRole">Batch (Internship Role)</Label>
-                        <Select
-                          value={studentProfile.internship_role || ""}
-                          onValueChange={(value) =>
-                            setStudentProfile({ ...studentProfile, internship_role: value })
-                          }
-                          disabled={studentProfile.status === "approved"}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select batch" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {batches.length === 0 ? (
-                              <SelectItem value="" disabled>No active batches available</SelectItem>
-                            ) : (
-                              batches.map((batch) => (
-                                <SelectItem key={batch.id} value={batch.name}>
-                                  {batch.name}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
+                        {studentProfile.status === "approved" ? (
+                          <div className="flex h-10 items-center rounded-md border bg-muted px-3">
+                            <span className="text-sm font-medium">
+                              {studentProfile.internship_role || "Not assigned"}
+                            </span>
+                          </div>
+                        ) : (
+                          <Select
+                            value={studentProfile.internship_role || ""}
+                            onValueChange={(value) =>
+                              setStudentProfile({ ...studentProfile, internship_role: value })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select batch" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {batches.length === 0 ? (
+                                <SelectItem value="" disabled>No active batches available</SelectItem>
+                              ) : (
+                                batches.map((batch) => (
+                                  <SelectItem key={batch.id} value={batch.name}>
+                                    {batch.name}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
                       </div>
 
                       <div className="space-y-2">
