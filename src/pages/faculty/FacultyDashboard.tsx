@@ -65,6 +65,19 @@ export default function FacultyDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch faculty profile
+        if (user) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", user.id)
+            .maybeSingle();
+          
+          if (profileData) {
+            setFacultyName(profileData.full_name || "");
+          }
+        }
+
         const [studentsRes, diariesRes, batchesRes] = await Promise.all([
           supabase
             .from("student_profiles")
@@ -105,7 +118,7 @@ export default function FacultyDashboard() {
     if (role === "faculty") {
       fetchData();
     }
-  }, [role]);
+  }, [role, user]);
 
   // Filter students by batch
   const filteredStudents = batchFilter === "all" 

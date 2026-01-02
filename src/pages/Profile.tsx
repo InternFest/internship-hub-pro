@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { SkeletonProfile } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Upload, Save, User } from "lucide-react";
+import { Loader2, Upload, Save, User, Lock } from "lucide-react";
 
 interface ProfileData {
   full_name: string;
@@ -44,6 +44,7 @@ interface StudentProfileData {
 interface Batch {
   id: string;
   name: string;
+  start_date: string;
   end_date: string;
 }
 
@@ -103,12 +104,12 @@ export default function Profile() {
           });
         }
 
-        // Fetch active batches (not completed)
+        // Fetch active batches (not completed - only ongoing or yet to start)
         const today = new Date().toISOString().split('T')[0];
         const { data: batchesData } = await supabase
           .from("batches")
-          .select("id, name, end_date")
-          .gte("end_date", today)
+          .select("id, name, start_date, end_date")
+          .gt("end_date", today)
           .order("name");
         
         setBatches(batchesData || []);
@@ -259,19 +260,18 @@ export default function Profile() {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("resumes")
-        .getPublicUrl(filePath);
+      // Store the file path instead of public URL for private bucket
+      const resumePath = filePath;
 
-      // Update profile with new resume URL
+      // Update profile with resume path
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ resume_url: publicUrl })
+        .update({ resume_url: resumePath })
         .eq("id", user.id);
 
       if (updateError) throw updateError;
 
-      setProfile((prev) => ({ ...prev, resume_url: publicUrl }));
+      setProfile((prev) => ({ ...prev, resume_url: resumePath }));
       toast({
         title: "Success",
         description: "Resume uploaded successfully.",
@@ -285,6 +285,33 @@ export default function Profile() {
       });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const getResumeSignedUrl = async (path: string): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("resumes")
+        .createSignedUrl(path, 60 * 60); // 1 hour expiry
+      if (error) throw error;
+      return data.signedUrl;
+    } catch (error) {
+      console.error("Error getting signed URL:", error);
+      return null;
+    }
+  };
+
+  const handleViewResume = async () => {
+    if (!profile.resume_url) return;
+    const signedUrl = await getResumeSignedUrl(profile.resume_url);
+    if (signedUrl) {
+      window.open(signedUrl, "_blank");
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to load resume.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -436,7 +463,15 @@ export default function Profile() {
               {role === "student" && (
                 <>
                   <div className="border-t pt-6">
-                    <h4 className="mb-4 font-semibold">Academic Information</h4>
+                    <div className="mb-4 flex items-center justify-between">
+                      <h4 className="font-semibold">Academic Information</h4>
+                      {studentProfile.status === "approved" && (
+                        <Badge className="bg-muted text-muted-foreground">
+                          <Lock className="mr-1 h-3 w-3" />
+                          Locked after approval
+                        </Badge>
+                      )}
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="usn">USN</Label>
@@ -446,6 +481,7 @@ export default function Profile() {
                           onChange={(e) =>
                             setStudentProfile({ ...studentProfile, usn: e.target.value })
                           }
+                          disabled={studentProfile.status === "approved"}
                         />
                       </div>
 
@@ -457,6 +493,7 @@ export default function Profile() {
                           onChange={(e) =>
                             setStudentProfile({ ...studentProfile, college_name: e.target.value })
                           }
+                          disabled={studentProfile.status === "approved"}
                         />
                       </div>
 
@@ -468,6 +505,7 @@ export default function Profile() {
                           onChange={(e) =>
                             setStudentProfile({ ...studentProfile, branch: e.target.value })
                           }
+                          disabled={studentProfile.status === "approved"}
                         />
                       </div>
 
@@ -478,6 +516,7 @@ export default function Profile() {
                           onValueChange={(value) =>
                             setStudentProfile({ ...studentProfile, internship_role: value })
                           }
+                          disabled={studentProfile.status === "approved"}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select batch" />
@@ -527,14 +566,13 @@ export default function Profile() {
                         disabled={uploading}
                       />
                       {profile.resume_url && (
-                        <a
-                          href={profile.resume_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline"
+                        <Button
+                          variant="link"
+                          className="text-sm text-primary"
+                          onClick={handleViewResume}
                         >
                           View current
-                        </a>
+                        </Button>
                       )}
                     </div>
                   </div>

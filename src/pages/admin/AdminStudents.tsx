@@ -117,7 +117,7 @@ export default function AdminStudents() {
       }
     };
 
-    if (role === "admin") {
+    if (role === "admin" || role === "faculty") {
       fetchData();
     }
   }, [role]);
@@ -181,14 +181,14 @@ export default function AdminStudents() {
     count: students.filter((s) => s.internship_role === batch.name).length,
   }));
 
-  if (role !== "admin") {
+  if (role !== "admin" && role !== "faculty") {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
           <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
-            Only administrators can access this page.
+            Only administrators and faculty can access this page.
           </p>
         </div>
       </DashboardLayout>
