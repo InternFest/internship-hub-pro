@@ -30,7 +30,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
-import { Shield, FolderKanban, Filter, Eye } from "lucide-react";
+import { Shield, FolderKanban, Filter, Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { format, parseISO } from "date-fns";
 
 interface ProjectMember {
@@ -69,8 +77,10 @@ interface Batch {
   name: string;
 }
 
+const ITEMS_PER_PAGE = 20;
+
 export default function AdminProjects() {
-  const { role } = useAuth();
+  const { role, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
@@ -78,8 +88,22 @@ export default function AdminProjects() {
   const [courseFilter, setCourseFilter] = useState("all");
   const [batchFilter, setBatchFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
+  const paginatedProjects = filteredProjects.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [courseFilter, batchFilter, dateFilter, searchQuery]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -159,6 +183,17 @@ export default function AdminProjects() {
   useEffect(() => {
     let result = projects;
 
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (p) =>
+          p.name?.toLowerCase().includes(query) ||
+          p.description?.toLowerCase().includes(query) ||
+          p.lead_profile?.full_name?.toLowerCase().includes(query)
+      );
+    }
+
     if (courseFilter !== "all") {
       result = result.filter((p) => p.lead_student?.internship_role === courseFilter);
     }
@@ -172,7 +207,7 @@ export default function AdminProjects() {
     }
 
     setFilteredProjects(result);
-  }, [courseFilter, batchFilter, dateFilter, projects]);
+  }, [courseFilter, batchFilter, dateFilter, searchQuery, projects]);
 
   const getRoleBadgeColor = (role: string | null) => {
     switch (role) {
@@ -188,6 +223,15 @@ export default function AdminProjects() {
         return "bg-muted text-muted-foreground";
     }
   };
+
+  // Wait for auth to load before checking access
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <SkeletonTable />
+      </DashboardLayout>
+    );
+  }
 
   if (role !== "admin") {
     return (
@@ -228,6 +272,17 @@ export default function AdminProjects() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by project name, description, or lead name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>Course</Label>
@@ -308,8 +363,8 @@ export default function AdminProjects() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredProjects.map((project) => (
-                      <TableRow key={project.id}>
+                    {paginatedProjects.map((project, index) => (
+                      <TableRow key={project.id} className="slide-up transition-smooth hover:bg-muted/50" style={{ animationDelay: `${index * 0.03}s` }}>
                         <TableCell className="font-medium">{project.name}</TableCell>
                         <TableCell>
                           <p className="max-w-[200px] truncate text-sm text-muted-foreground">
@@ -341,6 +396,54 @@ export default function AdminProjects() {
                     ))}
                   </TableBody>
                 </Table>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="mt-4 flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, filteredProjects.length)} of {filteredProjects.length} projects
+                    </p>
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious
+                            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink
+                                onClick={() => setCurrentPage(pageNum)}
+                                isActive={currentPage === pageNum}
+                                className="cursor-pointer"
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
+                        <PaginationItem>
+                          <PaginationNext
+                            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
