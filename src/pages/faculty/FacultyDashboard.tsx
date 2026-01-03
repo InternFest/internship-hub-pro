@@ -157,18 +157,41 @@ export default function FacultyDashboard() {
     );
   }
 
+  // Calculate today's submissions
+  const today = new Date().toISOString().split('T')[0];
+  const todayDiaryCount = diaryEntries.filter(e => e.entry_date === today).length;
+  
+  // Batch-wise student distribution
+  const batchDistribution = batches.map(b => ({
+    name: b.name,
+    count: students.filter(s => s.internship_role === b.name).length,
+  }));
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="fade-in">
-          <h1 className="text-2xl font-bold md:text-3xl">
-            Welcome, {facultyName || "Faculty"}! 👋
-          </h1>
-          <p className="text-muted-foreground">View student progress and activities.</p>
+          <h1 className="text-2xl font-bold md:text-3xl">Faculty Dashboard</h1>
+          <p className="text-muted-foreground">Monitor student progress and internship activities.</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-3 slide-up">
+        {/* Welcome Card */}
+        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 fade-in">
+          <CardContent className="flex items-center gap-4 pt-6">
+            <Avatar className="h-16 w-16 border-2 border-primary/30">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+                {getInitials(facultyName)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-xl font-semibold">Welcome back, {facultyName || "Faculty"}! 👋</h2>
+              <p className="text-muted-foreground">Here's an overview of your students' activities.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stats Grid */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 slide-up">
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -183,7 +206,18 @@ export default function FacultyDashboard() {
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
-                <BookOpen className="h-6 w-6 text-success" />
+                <CheckCircle className="h-6 w-6 text-success" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{todayDiaryCount}</p>
+                <p className="text-sm text-muted-foreground">Today's Submissions</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="card-hover">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/50">
+                <BookOpen className="h-6 w-6 text-accent-foreground" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{diaryEntries.length}</p>
@@ -193,8 +227,8 @@ export default function FacultyDashboard() {
           </Card>
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/50">
-                <FolderKanban className="h-6 w-6 text-accent-foreground" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
+                <FolderKanban className="h-6 w-6 text-warning" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{batches.length}</p>
@@ -203,6 +237,28 @@ export default function FacultyDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Batch Distribution */}
+        {batchDistribution.length > 0 && (
+          <Card className="slide-up">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Users className="h-4 w-4" />
+                Students by Batch
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {batchDistribution.map((batch) => (
+                  <div key={batch.name} className="flex items-center justify-between rounded-lg border p-3 transition-smooth hover:bg-muted/50">
+                    <span className="font-medium">{batch.name}</span>
+                    <Badge variant="secondary">{batch.count} students</Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="students" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">

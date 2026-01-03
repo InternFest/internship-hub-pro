@@ -395,6 +395,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_project: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       generate_student_id: {
         Args: { batch_year: string; course_code: string }
         Returns: string

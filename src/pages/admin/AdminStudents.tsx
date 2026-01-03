@@ -181,7 +181,10 @@ export default function AdminStudents() {
     count: students.filter((s) => s.internship_role === batch.name).length,
   }));
 
-  if (role !== "admin" && role !== "faculty") {
+  // Allow both admin and faculty roles
+  const hasAccess = role === "admin" || role === "faculty";
+  
+  if (!hasAccess) {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12">
