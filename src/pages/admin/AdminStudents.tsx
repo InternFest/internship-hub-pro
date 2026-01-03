@@ -64,7 +64,7 @@ interface Batch {
 }
 
 export default function AdminStudents() {
-  const { role } = useAuth();
+  const { role, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
@@ -180,6 +180,15 @@ export default function AdminStudents() {
     name: batch.name,
     count: students.filter((s) => s.internship_role === batch.name).length,
   }));
+
+  // Wait for auth to load before checking access
+  if (authLoading) {
+    return (
+      <DashboardLayout>
+        <SkeletonTable />
+      </DashboardLayout>
+    );
+  }
 
   // Allow both admin and faculty roles
   const hasAccess = role === "admin" || role === "faculty";
