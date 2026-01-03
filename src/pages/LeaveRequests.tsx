@@ -27,6 +27,8 @@ import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, CalendarOff, Lock, Calendar, AlertCircle, CheckCircle, XCircle } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { z } from "zod";
+import { leaveRequestSchema } from "@/lib/validations";
 
 interface LeaveRequest {
   id: string;
@@ -49,6 +51,7 @@ export default function LeaveRequests() {
   const [leaveDate, setLeaveDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [leaveType, setLeaveType] = useState<"sick" | "casual">("casual");
   const [reason, setReason] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchRequests = async () => {
     if (!user) return;
@@ -74,13 +77,28 @@ export default function LeaveRequests() {
   }, [user]);
 
   const handleSubmit = async () => {
-    if (!user || !reason) {
-      toast({
-        title: "Error",
-        description: "Please provide a reason for your leave request.",
-        variant: "destructive",
+    if (!user) return;
+
+    setErrors({});
+
+    // Validate form
+    try {
+      leaveRequestSchema.parse({
+        leaveDate,
+        leaveType,
+        reason,
       });
-      return;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+        return;
+      }
     }
 
     setSaving(true);
@@ -118,6 +136,7 @@ export default function LeaveRequests() {
     setLeaveDate(format(new Date(), "yyyy-MM-dd"));
     setLeaveType("casual");
     setReason("");
+    setErrors({});
   };
 
   const getStatusIcon = (status: string) => {
@@ -197,19 +216,23 @@ export default function LeaveRequests() {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="leaveDate">Date</Label>
+                  <Label htmlFor="leaveDate">Date *</Label>
                   <Input
                     id="leaveDate"
                     type="date"
                     value={leaveDate}
                     onChange={(e) => setLeaveDate(e.target.value)}
+                    className={errors.leaveDate ? "border-destructive" : ""}
                   />
+                  {errors.leaveDate && (
+                    <p className="text-xs text-destructive">{errors.leaveDate}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="leaveType">Leave Type</Label>
+                  <Label htmlFor="leaveType">Leave Type *</Label>
                   <Select value={leaveType} onValueChange={(v) => setLeaveType(v as "sick" | "casual")}>
-                    <SelectTrigger>
+                    <SelectTrigger className={errors.leaveType ? "border-destructive" : ""}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -217,17 +240,24 @@ export default function LeaveRequests() {
                       <SelectItem value="casual">Casual Leave</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.leaveType && (
+                    <p className="text-xs text-destructive">{errors.leaveType}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reason">Reason *</Label>
+                  <Label htmlFor="reason">Reason * (min 10 characters)</Label>
                   <Textarea
                     id="reason"
-                    placeholder="Please provide a reason for your leave..."
+                    placeholder="Please provide a detailed reason for your leave..."
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     rows={4}
+                    className={errors.reason ? "border-destructive" : ""}
                   />
+                  {errors.reason && (
+                    <p className="text-xs text-destructive">{errors.reason}</p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-3">

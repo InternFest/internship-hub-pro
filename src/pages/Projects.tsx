@@ -38,6 +38,8 @@ import {
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, FolderKanban, Lock, Users, Crown, UserPlus, Search, LogIn } from "lucide-react";
+import { z } from "zod";
+import { projectSchema } from "@/lib/validations";
 
 interface ProjectMember {
   id: string;
@@ -89,6 +91,7 @@ export default function Projects() {
   // Form state
   const [projectName, setProjectName] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchProjects = async () => {
     if (!user) return;
@@ -228,13 +231,27 @@ export default function Projects() {
   }, [user]);
 
   const handleCreateProject = async () => {
-    if (!user || !projectName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please provide a project name.",
-        variant: "destructive",
+    if (!user) return;
+
+    setErrors({});
+
+    // Validate form
+    try {
+      projectSchema.parse({
+        name: projectName,
+        description: projectDescription,
       });
-      return;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+        return;
+      }
     }
 
     setSaving(true);
@@ -474,6 +491,7 @@ export default function Projects() {
               setIsLead(null);
               setProjectName("");
               setProjectDescription("");
+              setErrors({});
             }
           }}>
             <DialogTrigger asChild>
@@ -492,17 +510,21 @@ export default function Projects() {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="projectName">Project Title *</Label>
+                  <Label htmlFor="projectName">Project Title * (min 3 characters)</Label>
                   <Input
                     id="projectName"
                     placeholder="Enter project name..."
                     value={projectName}
                     onChange={(e) => setProjectName(e.target.value)}
+                    className={errors.name ? "border-destructive" : ""}
                   />
+                  {errors.name && (
+                    <p className="text-xs text-destructive">{errors.name}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="projectDescription">Project Description</Label>
+                  <Label htmlFor="projectDescription">Project Description (optional)</Label>
                   <Textarea
                     id="projectDescription"
                     placeholder="Describe your project..."
