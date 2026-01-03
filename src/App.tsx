@@ -131,12 +131,12 @@ function AppRoutes() {
         }
       />
 
-      {/* Faculty routes */}
+      {/* Students route - shared by admin and faculty */}
       <Route
         path="/students"
         element={
           <ProtectedRoute>
-            <FacultyDashboard />
+            <AdminStudents />
           </ProtectedRoute>
         }
       />
