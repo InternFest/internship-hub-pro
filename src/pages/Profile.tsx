@@ -19,6 +19,8 @@ import {
 import { SkeletonProfile } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Upload, Save, User, Lock } from "lucide-react";
+import { z } from "zod";
+import { profileUpdateSchema, studentProfileSchema } from "@/lib/validations";
 
 interface ProfileData {
   full_name: string;
@@ -55,6 +57,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [profile, setProfile] = useState<ProfileData>({
     full_name: "",
@@ -153,6 +156,29 @@ export default function Profile() {
 
   const handleSave = async () => {
     if (!user) return;
+
+    setErrors({});
+
+    // Validate profile data
+    try {
+      profileUpdateSchema.parse({
+        fullName: profile.full_name,
+        phone: profile.phone || "",
+        bio: profile.bio || "",
+        linkedinUrl: profile.linkedin_url || "",
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+        return;
+      }
+    }
 
     setSaving(true);
     try {
@@ -416,12 +442,16 @@ export default function Profile() {
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name</Label>
+                  <Label htmlFor="fullName">Full Name *</Label>
                   <Input
                     id="fullName"
                     value={profile.full_name}
                     onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                    className={errors.fullName ? "border-destructive" : ""}
                   />
+                  {errors.fullName && (
+                    <p className="text-xs text-destructive">{errors.fullName}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -430,12 +460,17 @@ export default function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">Phone Number (10 digits)</Label>
                   <Input
                     id="phone"
                     value={profile.phone || ""}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                    onChange={(e) => setProfile({ ...profile, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                    className={errors.phone ? "border-destructive" : ""}
+                    placeholder="1234567890"
                   />
+                  {errors.phone && (
+                    <p className="text-xs text-destructive">{errors.phone}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -445,7 +480,11 @@ export default function Profile() {
                     placeholder="https://linkedin.com/in/..."
                     value={profile.linkedin_url || ""}
                     onChange={(e) => setProfile({ ...profile, linkedin_url: e.target.value })}
+                    className={errors.linkedinUrl ? "border-destructive" : ""}
                   />
+                  {errors.linkedinUrl && (
+                    <p className="text-xs text-destructive">{errors.linkedinUrl}</p>
+                  )}
                 </div>
               </div>
 

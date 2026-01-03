@@ -27,6 +27,8 @@ import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, MessageSquare, Lock, CheckCircle, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { z } from "zod";
+import { adminQuerySchema } from "@/lib/validations";
 
 type QueryCategory = "course" | "faculty" | "schedule" | "work" | "other";
 
@@ -59,6 +61,7 @@ export default function AdminQueries() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<QueryCategory>("other");
   const [description, setDescription] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchQueries = async () => {
     if (!user) return;
@@ -84,13 +87,28 @@ export default function AdminQueries() {
   }, [user]);
 
   const handleSubmit = async () => {
-    if (!user || !title || !description) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
+    if (!user) return;
+
+    setErrors({});
+
+    // Validate form
+    try {
+      adminQuerySchema.parse({
+        title,
+        category,
+        description,
       });
-      return;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+        return;
+      }
     }
 
     setSaving(true);
@@ -128,6 +146,7 @@ export default function AdminQueries() {
     setTitle("");
     setCategory("other");
     setDescription("");
+    setErrors({});
   };
 
   const openCount = queries.filter((q) => !q.is_resolved).length;
@@ -184,19 +203,23 @@ export default function AdminQueries() {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title *</Label>
+                  <Label htmlFor="title">Title * (min 3 characters)</Label>
                   <Input
                     id="title"
                     placeholder="Brief summary of your query..."
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    className={errors.title ? "border-destructive" : ""}
                   />
+                  {errors.title && (
+                    <p className="text-xs text-destructive">{errors.title}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category">Category *</Label>
                   <Select value={category} onValueChange={(v) => setCategory(v as QueryCategory)}>
-                    <SelectTrigger>
+                    <SelectTrigger className={errors.category ? "border-destructive" : ""}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -207,17 +230,24 @@ export default function AdminQueries() {
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
+                  {errors.category && (
+                    <p className="text-xs text-destructive">{errors.category}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description *</Label>
+                  <Label htmlFor="description">Description * (min 20 characters)</Label>
                   <Textarea
                     id="description"
                     placeholder="Describe your query in detail..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={5}
+                    className={errors.description ? "border-destructive" : ""}
                   />
+                  {errors.description && (
+                    <p className="text-xs text-destructive">{errors.description}</p>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-3">

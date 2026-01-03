@@ -26,6 +26,8 @@ import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, BookOpen, Calendar, Clock, Lock, Pencil } from "lucide-react";
 import { format, differenceInDays, parseISO } from "date-fns";
+import { z } from "zod";
+import { diaryEntrySchema } from "@/lib/validations";
 
 interface DiaryEntry {
   id: string;
@@ -60,6 +62,7 @@ export default function InternshipDiary() {
   const [referenceLinks, setReferenceLinks] = useState("");
   const [learningOutcome, setLearningOutcome] = useState("");
   const [skillsGained, setSkillsGained] = useState("");
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchEntries = async () => {
     if (!user) return;
@@ -105,13 +108,33 @@ export default function InternshipDiary() {
   };
 
   const handleSubmit = async () => {
-    if (!user || !workDescription || !hoursWorked) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields.",
-        variant: "destructive",
+    if (!user) return;
+
+    setErrors({});
+
+    // Validate form
+    try {
+      diaryEntrySchema.parse({
+        entryDate,
+        title,
+        workDescription,
+        workSummary,
+        hoursWorked,
+        referenceLinks,
+        learningOutcome,
+        skillsGained,
       });
-      return;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+        return;
+      }
     }
 
     setSaving(true);
@@ -187,6 +210,7 @@ export default function InternshipDiary() {
     setReferenceLinks("");
     setLearningOutcome("");
     setSkillsGained("");
+    setErrors({});
   };
 
   const openEditDialog = (entry: DiaryEntry) => {
@@ -278,7 +302,11 @@ export default function InternshipDiary() {
                       type="date"
                       value={entryDate}
                       onChange={(e) => setEntryDate(e.target.value)}
+                      className={errors.entryDate ? "border-destructive" : ""}
                     />
+                    {errors.entryDate && (
+                      <p className="text-xs text-destructive">{errors.entryDate}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -292,7 +320,11 @@ export default function InternshipDiary() {
                       placeholder="8"
                       value={hoursWorked}
                       onChange={(e) => setHoursWorked(e.target.value)}
+                      className={errors.hoursWorked ? "border-destructive" : ""}
                     />
+                    {errors.hoursWorked && (
+                      <p className="text-xs text-destructive">{errors.hoursWorked}</p>
+                    )}
                   </div>
                 </div>
 
@@ -307,14 +339,18 @@ export default function InternshipDiary() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="workDescription">What I Worked On *</Label>
+                  <Label htmlFor="workDescription">What I Worked On * (min 10 characters)</Label>
                   <Textarea
                     id="workDescription"
                     placeholder="Describe what you worked on today..."
                     value={workDescription}
                     onChange={(e) => setWorkDescription(e.target.value)}
                     rows={3}
+                    className={errors.workDescription ? "border-destructive" : ""}
                   />
+                  {errors.workDescription && (
+                    <p className="text-xs text-destructive">{errors.workDescription}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

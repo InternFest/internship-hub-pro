@@ -315,6 +315,59 @@ export type Database = {
         }
         Relationships: []
       }
+      resources: {
+        Row: {
+          batch_id: string
+          content_text: string | null
+          content_url: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          module_number: number
+          pdf_url: string | null
+          resource_type: Database["public"]["Enums"]["resource_type"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          content_text?: string | null
+          content_url?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          module_number?: number
+          pdf_url?: string | null
+          resource_type?: Database["public"]["Enums"]["resource_type"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          content_text?: string | null
+          content_url?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          module_number?: number
+          pdf_url?: string | null
+          resource_type?: Database["public"]["Enums"]["resource_type"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_profiles: {
         Row: {
           batch_id: string | null
@@ -429,6 +482,7 @@ export type Database = {
       leave_status: "pending" | "approved" | "rejected"
       leave_type: "sick" | "casual"
       query_category: "course" | "faculty" | "schedule" | "work" | "other"
+      resource_type: "video" | "text" | "notes"
       skill_level: "beginner" | "intermediate" | "advanced"
       student_status: "pending" | "approved" | "rejected"
     }
@@ -563,6 +617,7 @@ export const Constants = {
       leave_status: ["pending", "approved", "rejected"],
       leave_type: ["sick", "casual"],
       query_category: ["course", "faculty", "schedule", "work", "other"],
+      resource_type: ["video", "text", "notes"],
       skill_level: ["beginner", "intermediate", "advanced"],
       student_status: ["pending", "approved", "rejected"],
     },

@@ -16,6 +16,7 @@ import LeaveRequests from "./pages/LeaveRequests";
 import AdminQueries from "./pages/AdminQueries";
 import Approvals from "./pages/Approvals";
 import Projects from "./pages/Projects";
+import StudentResources from "./pages/StudentResources";
 import FacultyDashboard from "./pages/faculty/FacultyDashboard";
 import FacultyLeaveRequests from "./pages/faculty/FacultyLeaveRequests";
 import AdminStudents from "./pages/admin/AdminStudents";
@@ -25,6 +26,7 @@ import AdminDiaries from "./pages/admin/AdminDiaries";
 import AdminLeaves from "./pages/admin/AdminLeaves";
 import AdminQueriesManagement from "./pages/admin/AdminQueriesManagement";
 import AdminProjects from "./pages/admin/AdminProjects";
+import AdminResources from "./pages/admin/AdminResources";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -123,6 +125,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/resources"
+        element={
+          <ProtectedRoute>
+            <StudentResources />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/approvals"
         element={
           <ProtectedRoute>
@@ -195,6 +205,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminQueriesManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manage-resources"
+        element={
+          <ProtectedRoute>
+            <AdminResources />
           </ProtectedRoute>
         }
       />
