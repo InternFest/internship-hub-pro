@@ -79,23 +79,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadUserData = async (userId: string) => {
+      const userRole = await fetchUserRole(userId);
+      if (!isMounted) return;
+      
+      setRole(userRole);
+      
+      if (userRole === "student") {
+        const status = await fetchStudentStatus(userId);
+        if (!isMounted) return;
+        setStudentStatus(status);
+      }
+      
+      setLoading(false);
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Defer Supabase calls with setTimeout to prevent deadlock
         if (session?.user) {
-          setTimeout(async () => {
-            const userRole = await fetchUserRole(session.user.id);
-            setRole(userRole);
-            
-            if (userRole === "student") {
-              const status = await fetchStudentStatus(session.user.id);
-              setStudentStatus(status);
-            }
-            setLoading(false);
+          // Defer Supabase calls with setTimeout to prevent deadlock
+          setTimeout(() => {
+            loadUserData(session.user.id);
           }, 0);
         } else {
           setRole(null);
@@ -107,26 +117,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isMounted) return;
+      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        setTimeout(async () => {
-          const userRole = await fetchUserRole(session.user.id);
-          setRole(userRole);
-          
-          if (userRole === "student") {
-            const status = await fetchStudentStatus(session.user.id);
-            setStudentStatus(status);
-          }
-          setLoading(false);
-        }, 0);
+        loadUserData(session.user.id);
       } else {
         setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
