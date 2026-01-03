@@ -29,16 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { SkeletonTable } from "@/components/SkeletonCard";
-import { Shield, FolderKanban, Filter, Eye, Users } from "lucide-react";
+import { Shield, FolderKanban, Filter, Eye } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
 interface ProjectMember {
@@ -77,10 +69,8 @@ interface Batch {
   name: string;
 }
 
-const ITEMS_PER_PAGE = 20;
-
 export default function AdminProjects() {
-  const { role, loading: authLoading } = useAuth();
+  const { role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
@@ -90,7 +80,6 @@ export default function AdminProjects() {
   const [dateFilter, setDateFilter] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -162,7 +151,7 @@ export default function AdminProjects() {
       }
     };
 
-    if (role === "admin" || role === "faculty") {
+    if (role === "admin") {
       fetchData();
     }
   }, [role]);
@@ -183,7 +172,6 @@ export default function AdminProjects() {
     }
 
     setFilteredProjects(result);
-    setCurrentPage(1); // Reset to first page on filter change
   }, [courseFilter, batchFilter, dateFilter, projects]);
 
   const getRoleBadgeColor = (role: string | null) => {
@@ -201,32 +189,14 @@ export default function AdminProjects() {
     }
   };
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredProjects.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedProjects = filteredProjects.slice(startIndex, endIndex);
-
-  // Wait for auth to load before checking access
-  if (authLoading) {
-    return (
-      <DashboardLayout>
-        <SkeletonTable />
-      </DashboardLayout>
-    );
-  }
-
-  // Allow both admin and faculty roles
-  const hasAccess = role === "admin" || role === "faculty";
-
-  if (!hasAccess) {
+  if (role !== "admin") {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12 fade-in">
           <Shield className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
-            Only administrators and faculty can access this page.
+            Only administrators can access this page.
           </p>
         </div>
       </DashboardLayout>
@@ -245,49 +215,8 @@ export default function AdminProjects() {
     <DashboardLayout>
       <div className="space-y-6">
         <div className="fade-in">
-          <h1 className="text-2xl font-bold md:text-3xl">Projects Management</h1>
+          <h1 className="text-2xl font-bold md:text-3xl">Project Teams</h1>
           <p className="text-muted-foreground">View all student projects and team members.</p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 fade-in">
-          <Card className="card-hover">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <FolderKanban className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{projects.length}</p>
-                <p className="text-sm text-muted-foreground">Total Projects</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-hover">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
-                <Users className="h-6 w-6 text-success" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {projects.reduce((acc, p) => acc + p.members.length, 0)}
-                </p>
-                <p className="text-sm text-muted-foreground">Total Members</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-hover">
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                <FolderKanban className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">
-                  {(projects.reduce((acc, p) => acc + p.members.length, 0) / Math.max(projects.length, 1)).toFixed(1)}
-                </p>
-                <p className="text-sm text-muted-foreground">Avg Team Size</p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Filters */}
@@ -353,7 +282,7 @@ export default function AdminProjects() {
               All Projects
             </CardTitle>
             <CardDescription>
-              Showing {startIndex + 1}-{Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} project(s)
+              {filteredProjects.length} project(s) found
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -366,103 +295,61 @@ export default function AdminProjects() {
                 </p>
               </div>
             ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Project Title</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Lead Name</TableHead>
-                        <TableHead>Team Size</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Project Title</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Project Lead</TableHead>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Team Size</TableHead>
+                      <TableHead className="text-right">View</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProjects.map((project) => (
+                      <TableRow key={project.id}>
+                        <TableCell className="font-medium">{project.name}</TableCell>
+                        <TableCell>
+                          <p className="max-w-[200px] truncate text-sm text-muted-foreground">
+                            {project.description || "-"}
+                          </p>
+                        </TableCell>
+                        <TableCell>{project.lead_profile?.full_name || "Unknown"}</TableCell>
+                        <TableCell>
+                          <Badge className={getRoleBadgeColor(project.lead_student?.internship_role)}>
+                            {project.lead_student?.internship_role?.toUpperCase() || "N/A"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{project.members.length} members</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedProject(project);
+                              setViewDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedProjects.map((project, index) => (
-                        <TableRow key={project.id} className="slide-up transition-smooth hover:bg-muted/50" style={{ animationDelay: `${index * 0.03}s` }}>
-                          <TableCell className="font-medium">{project.name}</TableCell>
-                          <TableCell>
-                            <p className="max-w-[200px] truncate text-sm text-muted-foreground">
-                              {project.description || "-"}
-                            </p>
-                          </TableCell>
-                          <TableCell>{project.lead_profile?.full_name || "Unknown"}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{project.members.length} members</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedProject(project);
-                                setViewDialogOpen(true);
-                              }}
-                              title="View Members"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-4 flex justify-center">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                        </PaginationItem>
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-                          return (
-                            <PaginationItem key={pageNum}>
-                              <PaginationLink
-                                onClick={() => setCurrentPage(pageNum)}
-                                isActive={currentPage === pageNum}
-                                className="cursor-pointer"
-                              >
-                                {pageNum}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        })}
-                        <PaginationItem>
-                          <PaginationNext
-                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
-                )}
-              </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* View Dialog - Project Members */}
+      {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto scale-in">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{selectedProject?.name}</DialogTitle>
             <DialogDescription>
@@ -471,66 +358,62 @@ export default function AdminProjects() {
           </DialogHeader>
           {selectedProject && (
             <div className="space-y-4">
-              {/* Project Lead Info */}
-              <div className="rounded-lg border p-4">
-                <h4 className="mb-3 text-sm font-medium text-muted-foreground">Project Lead</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Name</span>
-                    <span className="font-medium">{selectedProject.lead_profile?.full_name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Email</span>
-                    <span className="text-sm">{selectedProject.lead_profile?.email}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Phone</span>
-                    <span>{selectedProject.lead_profile?.phone || "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Created</span>
-                    <span>{format(parseISO(selectedProject.created_at), "MMM d, yyyy")}</span>
-                  </div>
+              <div className="grid gap-2 rounded-lg border p-4">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Project Lead</span>
+                  <span className="font-medium">
+                    {selectedProject.lead_profile?.full_name}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Lead Email</span>
+                  <span className="text-sm">{selectedProject.lead_profile?.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Lead Phone</span>
+                  <span>{selectedProject.lead_profile?.phone || "-"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Created</span>
+                  <span>
+                    {format(parseISO(selectedProject.created_at), "MMM d, yyyy")}
+                  </span>
                 </div>
               </div>
 
-              {/* Team Members */}
               <div>
                 <h4 className="mb-2 text-sm font-medium">
                   Team Members ({selectedProject.members.length})
                 </h4>
                 <div className="space-y-2">
-                  {selectedProject.members.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No team members yet.</p>
-                  ) : (
-                    selectedProject.members.map((member, idx) => (
-                      <div
-                        key={member.id}
-                        className="rounded-lg border p-3"
-                      >
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Candidate {idx + 1}</span>
+                  {selectedProject.members.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium">{member.profile?.full_name}</p>
                           {member.user_id === selectedProject.lead_id && (
                             <Badge variant="secondary" className="text-xs">Lead</Badge>
                           )}
                         </div>
-                        <div className="space-y-1">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Name</span>
-                            <span className="font-medium">{member.profile?.full_name || "Unknown"}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Email</span>
-                            <span className="text-sm">{member.profile?.email || "-"}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Phone</span>
-                            <span>{member.profile?.phone || "-"}</span>
-                          </div>
-                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {member.profile?.email}
+                        </p>
                       </div>
-                    ))
-                  )}
+                      <div className="text-right">
+                        <p className="text-sm">{member.profile?.phone || "-"}</p>
+                        {member.student_profile?.internship_role && (
+                          <Badge
+                            className={`text-xs ${getRoleBadgeColor(member.student_profile.internship_role)}`}
+                          >
+                            {member.student_profile.internship_role.toUpperCase()}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 

@@ -65,7 +65,6 @@ const adminNavItems: NavItem[] = [
   { title: "Students", href: "/students", icon: Users },
   { title: "Faculty", href: "/faculty", icon: UserCog },
   { title: "Batches", href: "/batches", icon: FolderKanban },
-  { title: "Projects", href: "/view-projects", icon: FolderKanban },
   { title: "Diaries", href: "/view-diaries", icon: BookOpen },
   { title: "Leaves", href: "/view-leaves", icon: CalendarOff },
   { title: "Queries", href: "/admin-queries", icon: MessageSquare },

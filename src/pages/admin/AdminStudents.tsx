@@ -30,14 +30,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { Shield, Users, Filter, Eye, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -71,8 +63,6 @@ interface Batch {
   name: string;
 }
 
-const ITEMS_PER_PAGE = 20;
-
 export default function AdminStudents() {
   const { role, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -80,11 +70,10 @@ export default function AdminStudents() {
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [batchFilter, setBatchFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("approved");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -158,7 +147,6 @@ export default function AdminStudents() {
     }
 
     setFilteredStudents(result);
-    setCurrentPage(1); // Reset to first page on filter change
   }, [batchFilter, statusFilter, searchQuery, students]);
 
   const getInitials = (name?: string) => {
@@ -192,12 +180,6 @@ export default function AdminStudents() {
     name: batch.name,
     count: students.filter((s) => s.internship_role === batch.name).length,
   }));
-
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
 
   // Wait for auth to load before checking access
   if (authLoading) {
@@ -357,7 +339,7 @@ export default function AdminStudents() {
               All Students
             </CardTitle>
             <CardDescription>
-              Showing {startIndex + 1}-{Math.min(endIndex, filteredStudents.length)} of {filteredStudents.length} student(s)
+              {filteredStudents.length} student(s) found
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -370,107 +352,65 @@ export default function AdminStudents() {
                 </p>
               </div>
             ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Student</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Batch / Internship Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Student ID</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">View</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents.map((student, index) => (
+                      <TableRow key={student.id} className="slide-up transition-smooth hover:bg-muted/50" style={{ animationDelay: `${index * 0.03}s` }}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={student.profile?.avatar_url || ""} />
+                              <AvatarFallback className="bg-primary text-xs text-primary-foreground">
+                                {getInitials(student.profile?.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">
+                              {student.profile?.full_name || "Unknown"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-mono">
+                            {student.student_id || "N/A"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{student.profile?.email || "-"}</TableCell>
+                        <TableCell>{student.profile?.phone || "-"}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">
+                            {student.internship_role || "N/A"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(student.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedStudent(student);
+                              setViewDialogOpen(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {paginatedStudents.map((student, index) => (
-                        <TableRow key={student.id} className="slide-up transition-smooth hover:bg-muted/50" style={{ animationDelay: `${index * 0.03}s` }}>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={student.profile?.avatar_url || ""} />
-                                <AvatarFallback className="bg-primary text-xs text-primary-foreground">
-                                  {getInitials(student.profile?.full_name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="font-medium">
-                                {student.profile?.full_name || "Unknown"}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{student.profile?.email || "-"}</TableCell>
-                          <TableCell>{student.profile?.phone || "-"}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">
-                              {student.internship_role || "N/A"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{getStatusBadge(student.status)}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedStudent(student);
-                                setViewDialogOpen(true);
-                              }}
-                              title="View Details"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="mt-4 flex justify-center">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious
-                            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                            className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                        </PaginationItem>
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum;
-                          if (totalPages <= 5) {
-                            pageNum = i + 1;
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1;
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i;
-                          } else {
-                            pageNum = currentPage - 2 + i;
-                          }
-                          return (
-                            <PaginationItem key={pageNum}>
-                              <PaginationLink
-                                onClick={() => setCurrentPage(pageNum)}
-                                isActive={currentPage === pageNum}
-                                className="cursor-pointer"
-                              >
-                                {pageNum}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        })}
-                        <PaginationItem>
-                          <PaginationNext
-                            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                            className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
-                )}
-              </>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -527,7 +467,7 @@ export default function AdminStudents() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Batch / Internship Role</span>
+                  <span className="text-sm text-muted-foreground">Batch</span>
                   <Badge variant="secondary">
                     {selectedStudent.internship_role || "N/A"}
                   </Badge>
