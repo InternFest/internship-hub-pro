@@ -147,8 +147,8 @@ export default function FacultyLeaveRequests() {
   if (role !== "faculty") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
+          <Shield className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">Only faculty members can access this page.</p>
         </div>
@@ -167,7 +167,7 @@ export default function FacultyLeaveRequests() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between fade-in">
           <div>
             <h1 className="text-2xl font-bold md:text-3xl">Leave Requests</h1>
             <p className="text-muted-foreground">Request and track your leave applications.</p>
@@ -175,12 +175,12 @@ export default function FacultyLeaveRequests() {
 
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="transition-smooth hover:scale-105">
                 <Plus className="mr-2 h-4 w-4" />
                 Request Leave
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="scale-in">
               <DialogHeader>
                 <DialogTitle>Request Leave</DialogTitle>
                 <DialogDescription>
@@ -244,8 +244,8 @@ export default function FacultyLeaveRequests() {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
+        <div className="grid gap-4 sm:grid-cols-3 slide-up">
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
                 <Clock className="h-6 w-6 text-warning" />
@@ -256,7 +256,7 @@ export default function FacultyLeaveRequests() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
                 <CheckCircle className="h-6 w-6 text-success" />
@@ -267,7 +267,7 @@ export default function FacultyLeaveRequests() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
                 <XCircle className="h-6 w-6 text-destructive" />
@@ -281,7 +281,7 @@ export default function FacultyLeaveRequests() {
         </div>
 
         {/* Requests List */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
@@ -291,23 +291,24 @@ export default function FacultyLeaveRequests() {
           </CardHeader>
           <CardContent>
             {requests.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Calendar className="mb-4 h-12 w-12 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-12 fade-in">
+                <Calendar className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
                 <h3 className="text-lg font-semibold">No leave requests</h3>
                 <p className="mb-4 text-muted-foreground">
                   You haven't submitted any leave requests yet.
                 </p>
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button onClick={() => setDialogOpen(true)} className="transition-smooth hover:scale-105">
                   <Plus className="mr-2 h-4 w-4" />
                   Request Leave
                 </Button>
               </div>
             ) : (
               <div className="space-y-4">
-                {requests.map((request) => (
+                {requests.map((request, index) => (
                   <div
                     key={request.id}
-                    className="flex items-start gap-4 rounded-lg border p-4"
+                    className="flex items-start gap-4 rounded-lg border p-4 card-hover slide-up transition-smooth"
+                    style={{ animationDelay: `${index * 0.05}s` }}
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                       {getStatusIcon(request.status)}

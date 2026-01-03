@@ -59,10 +59,10 @@ export default function Index() {
           </Link>
           
           <div className="flex items-center gap-3">
-            <Button variant="ghost" asChild>
+            <Button variant="ghost" asChild className="transition-smooth hover:scale-105">
               <Link to="/auth?mode=login">Login</Link>
             </Button>
-            <Button asChild>
+            <Button asChild className="transition-smooth hover:scale-105">
               <Link to="/auth?mode=register">Register</Link>
             </Button>
           </div>
