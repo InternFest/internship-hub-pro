@@ -194,8 +194,8 @@ export default function AdminDiaries() {
   if (role !== "admin" && role !== "faculty") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
+          <Shield className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
             Only administrators and faculty can access this page.
@@ -216,14 +216,14 @@ export default function AdminDiaries() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
+        <div className="fade-in">
           <h1 className="text-2xl font-bold md:text-3xl">Internship Diaries</h1>
           <p className="text-muted-foreground">View all student internship diary entries.</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
+        <div className="grid gap-4 sm:grid-cols-3 slide-up">
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
                 <Users className="h-6 w-6 text-primary" />
@@ -234,7 +234,7 @@ export default function AdminDiaries() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
                 <CheckCircle className="h-6 w-6 text-success" />
@@ -245,7 +245,7 @@ export default function AdminDiaries() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
                 <XCircle className="h-6 w-6 text-destructive" />
@@ -259,7 +259,7 @@ export default function AdminDiaries() {
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="h-4 w-4" />

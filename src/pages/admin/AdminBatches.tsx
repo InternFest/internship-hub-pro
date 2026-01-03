@@ -222,8 +222,8 @@ export default function AdminBatches() {
   if (role !== "admin") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
+          <Shield className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
             Only administrators can access this page.
@@ -244,7 +244,7 @@ export default function AdminBatches() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between fade-in">
           <div>
             <h1 className="text-2xl font-bold md:text-3xl">Batch Management</h1>
             <p className="text-muted-foreground">Create and manage internship batches.</p>
@@ -258,12 +258,12 @@ export default function AdminBatches() {
             }}
           >
             <DialogTrigger asChild>
-              <Button>
+              <Button className="transition-smooth hover:scale-105">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Batch
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto scale-in">
               <DialogHeader>
                 <DialogTitle>
                   {editingBatch ? "Edit Batch" : "Create New Batch"}
@@ -380,7 +380,7 @@ export default function AdminBatches() {
           </Dialog>
         </div>
 
-        <Card>
+        <Card className="slide-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FolderKanban className="h-5 w-5" />
@@ -390,13 +390,13 @@ export default function AdminBatches() {
           </CardHeader>
           <CardContent>
             {batches.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <FolderKanban className="mb-4 h-12 w-12 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-12 fade-in">
+                <FolderKanban className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
                 <h3 className="text-lg font-semibold">No batches yet</h3>
                 <p className="mb-4 text-muted-foreground">
                   Create your first batch to get started.
                 </p>
-                <Button onClick={() => setDialogOpen(true)}>
+                <Button onClick={() => setDialogOpen(true)} className="transition-smooth hover:scale-105">
                   <Plus className="mr-2 h-4 w-4" />
                   Create Batch
                 </Button>

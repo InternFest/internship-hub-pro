@@ -136,8 +136,8 @@ export default function AdminQueries() {
   if (studentStatus !== "approved") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Lock className="mb-4 h-12 w-12 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
+          <Lock className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Restricted</h3>
           <p className="text-muted-foreground">
             This feature is available after your profile is approved.
@@ -158,7 +158,7 @@ export default function AdminQueries() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between fade-in">
           <div>
             <h1 className="text-2xl font-bold md:text-3xl">Write to Admin</h1>
             <p className="text-muted-foreground">Submit queries or concerns to administrators.</p>
@@ -169,12 +169,12 @@ export default function AdminQueries() {
             if (!open) resetForm();
           }}>
             <DialogTrigger asChild>
-              <Button>
+              <Button className="transition-smooth hover:scale-105">
                 <Plus className="mr-2 h-4 w-4" />
                 New Query
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="scale-in">
               <DialogHeader>
                 <DialogTitle>Submit a Query</DialogTitle>
                 <DialogDescription>
@@ -241,8 +241,8 @@ export default function AdminQueries() {
         </div>
 
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
+        <div className="grid gap-4 sm:grid-cols-2 slide-up">
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
                 <Clock className="h-6 w-6 text-warning" />
@@ -254,7 +254,7 @@ export default function AdminQueries() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
                 <CheckCircle className="h-6 w-6 text-success" />
@@ -269,14 +269,14 @@ export default function AdminQueries() {
 
         {/* Queries List */}
         {queries.length === 0 ? (
-          <Card>
+          <Card className="slide-up card-hover">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <MessageSquare className="mb-4 h-12 w-12 text-muted-foreground" />
+              <MessageSquare className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
               <h3 className="text-lg font-semibold">No queries yet</h3>
               <p className="mb-4 text-muted-foreground">
                 You haven't submitted any queries yet.
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button onClick={() => setDialogOpen(true)} className="transition-smooth hover:scale-105">
                 <Plus className="mr-2 h-4 w-4" />
                 Submit Query
               </Button>
@@ -284,8 +284,8 @@ export default function AdminQueries() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {queries.map((query) => (
-              <Card key={query.id} className="transition-colors hover:bg-muted/30">
+            {queries.map((query, index) => (
+              <Card key={query.id} className="transition-smooth hover:bg-muted/30 card-hover slide-up" style={{ animationDelay: `${index * 0.05}s` }}>
                 <CardContent className="p-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex-1 space-y-2">

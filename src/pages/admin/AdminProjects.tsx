@@ -192,8 +192,8 @@ export default function AdminProjects() {
   if (role !== "admin") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
+          <Shield className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
             Only administrators can access this page.
@@ -214,13 +214,13 @@ export default function AdminProjects() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
+        <div className="fade-in">
           <h1 className="text-2xl font-bold md:text-3xl">Project Teams</h1>
           <p className="text-muted-foreground">View all student projects and team members.</p>
         </div>
 
         {/* Filters */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Filter className="h-4 w-4" />
@@ -275,7 +275,7 @@ export default function AdminProjects() {
         </Card>
 
         {/* Projects Table */}
-        <Card>
+        <Card className="slide-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FolderKanban className="h-5 w-5" />
@@ -287,8 +287,8 @@ export default function AdminProjects() {
           </CardHeader>
           <CardContent>
             {filteredProjects.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <FolderKanban className="mb-4 h-12 w-12 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-12 fade-in">
+                <FolderKanban className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
                 <h3 className="text-lg font-semibold">No projects found</h3>
                 <p className="text-muted-foreground">
                   No projects match your current filters.

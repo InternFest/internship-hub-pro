@@ -105,8 +105,8 @@ export default function AdminFaculty() {
   if (role !== "admin") {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 fade-in">
+          <Shield className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
             Only administrators can access this page.
@@ -127,12 +127,12 @@ export default function AdminFaculty() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
+        <div className="fade-in">
           <h1 className="text-2xl font-bold md:text-3xl">Faculty Management</h1>
           <p className="text-muted-foreground">View all registered faculty members and their batch assignments.</p>
         </div>
 
-        <Card>
+        <Card className="slide-up">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserCog className="h-5 w-5" />
@@ -144,8 +144,8 @@ export default function AdminFaculty() {
           </CardHeader>
           <CardContent>
             {faculty.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <UserCog className="mb-4 h-12 w-12 text-muted-foreground" />
+              <div className="flex flex-col items-center justify-center py-12 fade-in">
+                <UserCog className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
                 <h3 className="text-lg font-semibold">No faculty members</h3>
                 <p className="text-muted-foreground">
                   No faculty members have been registered yet.
