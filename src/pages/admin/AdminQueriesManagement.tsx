@@ -146,10 +146,8 @@ export default function AdminQueriesManagement() {
       result = result.filter((q) => q.student_profile?.batch_id === batchFilter);
     }
 
-    // Course filter
-    if (courseFilter !== "all") {
-      result = result.filter((q) => q.student_profile?.internship_role === courseFilter);
-    }
+    // Course filter - removed as internship_role is deprecated
+    // This filter now uses batch_id which is already filtered above
 
     setFilteredQueries(result);
   }, [dateFilter, customDate, batchFilter, courseFilter, queries]);

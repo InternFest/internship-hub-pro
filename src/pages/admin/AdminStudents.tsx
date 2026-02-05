@@ -160,9 +160,9 @@ export default function AdminStudents() {
       );
     }
 
-    // Filter by batch (internship_role now stores batch name)
+    // Filter by batch using batch_id
     if (batchFilter !== "all") {
-      result = result.filter((s) => s.internship_role === batchFilter);
+      result = result.filter((s) => s.batch_id === batchFilter);
     }
 
     if (statusFilter !== "all") {
@@ -198,10 +198,10 @@ export default function AdminStudents() {
   const approvedCount = students.filter((s) => s.status === "approved").length;
   const pendingCount = students.filter((s) => s.status === "pending").length;
   
-  // Batch stats based on internship_role (which now stores batch name)
+  // Batch stats based on batch_id
   const batchStats = batches.map((batch) => ({
     name: batch.name,
-    count: students.filter((s) => s.internship_role === batch.name).length,
+    count: students.filter((s) => s.batch_id === batch.id).length,
   }));
 
   // Wait for auth to load before checking access
@@ -328,7 +328,7 @@ export default function AdminStudents() {
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
                     {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.name}>
+                      <SelectItem key={batch.id} value={batch.id}>
                         {batch.name}
                       </SelectItem>
                     ))}
@@ -413,7 +413,7 @@ export default function AdminStudents() {
                         <TableCell>{student.profile?.phone || "-"}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">
-                            {student.internship_role || "N/A"}
+                            {batches.find(b => b.id === student.batch_id)?.name || "N/A"}
                           </Badge>
                         </TableCell>
                         <TableCell>{getStatusBadge(student.status)}</TableCell>
@@ -540,7 +540,7 @@ export default function AdminStudents() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Batch</span>
                   <Badge variant="secondary">
-                    {selectedStudent.internship_role || "N/A"}
+                    {batches.find(b => b.id === selectedStudent.batch_id)?.name || "N/A"}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
