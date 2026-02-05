@@ -133,9 +133,9 @@ export default function AdminLeaves() {
       result = result.filter((r) => r.leave_date === customDate);
     }
 
-    // Batch filter (only for students)
+    // Batch filter (only for students) - using batch_id now
     if (batchFilter !== "all") {
-      result = result.filter((r) => r.student_profile?.internship_role === batchFilter);
+      result = result.filter((r) => r.student_profile?.batch_id === batchFilter);
     }
 
     setFilteredRequests(result);
@@ -342,7 +342,7 @@ export default function AdminLeaves() {
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
                     {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.name}>
+                      <SelectItem key={batch.id} value={batch.id}>
                         {batch.name}
                       </SelectItem>
                     ))}

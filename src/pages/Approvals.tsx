@@ -120,9 +120,9 @@ export default function Approvals() {
   useEffect(() => {
     let result = pendingStudents;
     
-    // Filter by batch (internship_role stores batch name)
+    // Filter by batch using batch_id
     if (batchFilter !== "all") {
-      result = result.filter((s) => s.internship_role === batchFilter);
+      result = result.filter((s) => s.batch_id === batchFilter);
     }
 
     // Filter by date
@@ -229,7 +229,7 @@ export default function Approvals() {
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
                     {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.name}>
+                      <SelectItem key={batch.id} value={batch.id}>
                         {batch.name}
                       </SelectItem>
                     ))}
@@ -300,7 +300,7 @@ export default function Approvals() {
                         <TableCell>{student.profile?.phone || "-"}</TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {student.internship_role || "N/A"}
+                            {batches.find(b => b.id === student.batch_id)?.name || "N/A"}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -411,7 +411,7 @@ export default function Approvals() {
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Batch (Internship Role)</span>
                   <Badge variant="outline">
-                    {selectedStudent.internship_role || "N/A"}
+                    {batches.find(b => b.id === selectedStudent.batch_id)?.name || "N/A"}
                   </Badge>
                 </div>
                 <div className="flex justify-between">

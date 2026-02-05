@@ -32,7 +32,7 @@ interface Student {
   id: string;
   user_id: string;
   student_id: string | null;
-  internship_role: string | null;
+  batch_id: string | null;
   profile: {
     full_name: string;
     email: string;
@@ -81,7 +81,7 @@ export default function FacultyDashboard() {
         const [studentsRes, diariesRes, batchesRes] = await Promise.all([
           supabase
             .from("student_profiles")
-            .select("id, user_id, student_id, internship_role")
+            .select("id, user_id, student_id, batch_id")
             .eq("status", "approved"),
           supabase
             .from("internship_diary")
@@ -123,7 +123,7 @@ export default function FacultyDashboard() {
   // Filter students by batch
   const filteredStudents = batchFilter === "all" 
     ? students 
-    : students.filter(s => s.internship_role === batchFilter);
+    : students.filter(s => s.batch_id === batchFilter);
 
   // Get diary submissions for selected date
   const todaySubmissions = diaryEntries.filter(e => e.entry_date === dateFilter);
@@ -164,7 +164,7 @@ export default function FacultyDashboard() {
   // Batch-wise student distribution
   const batchDistribution = batches.map(b => ({
     name: b.name,
-    count: students.filter(s => s.internship_role === b.name).length,
+    count: students.filter(s => s.batch_id === b.id).length,
   }));
 
   return (
@@ -289,7 +289,7 @@ export default function FacultyDashboard() {
                         <TableCell className="font-medium">{student.profile?.full_name || "Unknown"}</TableCell>
                         <TableCell>{student.profile?.email || "-"}</TableCell>
                         <TableCell>{student.profile?.phone || "-"}</TableCell>
-                        <TableCell><Badge variant="secondary">{student.internship_role || "N/A"}</Badge></TableCell>
+                        <TableCell><Badge variant="secondary">{batches.find(b => b.id === student.batch_id)?.name || "N/A"}</Badge></TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -312,7 +312,7 @@ export default function FacultyDashboard() {
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Batches</SelectItem>
-                        {batches.map((b) => <SelectItem key={b.id} value={b.name}>{b.name}</SelectItem>)}
+                        {batches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -342,7 +342,7 @@ export default function FacultyDashboard() {
                             <TableRow key={s.id}>
                               <TableCell>{s.profile?.full_name || "Unknown"}</TableCell>
                               <TableCell><Badge variant="outline" className="font-mono">{s.student_id || "N/A"}</Badge></TableCell>
-                              <TableCell><Badge variant="secondary">{s.internship_role || "N/A"}</Badge></TableCell>
+                              <TableCell><Badge variant="secondary">{batches.find(b => b.id === s.batch_id)?.name || "N/A"}</Badge></TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

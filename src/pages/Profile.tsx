@@ -38,7 +38,7 @@ interface StudentProfileData {
   usn: string | null;
   college_name: string | null;
   branch: string | null;
-  internship_role: string | null;
+  batch_id: string | null;
   skill_level: string | null;
   status: string | null;
 }
@@ -75,7 +75,7 @@ export default function Profile() {
     usn: null,
     college_name: null,
     branch: null,
-    internship_role: null,
+    batch_id: null,
     skill_level: null,
     status: null,
   });
@@ -133,7 +133,7 @@ export default function Profile() {
               usn: studentData.usn,
               college_name: studentData.college_name,
               branch: studentData.branch,
-              internship_role: studentData.internship_role,
+              batch_id: studentData.batch_id,
               skill_level: studentData.skill_level,
               status: studentData.status,
             });
@@ -203,7 +203,7 @@ export default function Profile() {
             usn: studentProfile.usn,
             college_name: studentProfile.college_name,
             branch: studentProfile.branch,
-            internship_role: studentProfile.internship_role as any,
+            batch_id: studentProfile.batch_id,
             skill_level: studentProfile.skill_level as any,
           })
           .eq("user_id", user.id);
@@ -549,18 +549,18 @@ export default function Profile() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="internshipRole">Batch (Internship Role)</Label>
+                        <Label htmlFor="batchId">Batch (Internship Role)</Label>
                         {studentProfile.status === "approved" ? (
                           <div className="flex h-10 items-center rounded-md border bg-muted px-3">
                             <span className="text-sm font-medium">
-                              {studentProfile.internship_role || "Not assigned"}
+                              {batches.find(b => b.id === studentProfile.batch_id)?.name || "Not assigned"}
                             </span>
                           </div>
                         ) : (
                           <Select
-                            value={studentProfile.internship_role || ""}
+                            value={studentProfile.batch_id || ""}
                             onValueChange={(value) =>
-                              setStudentProfile({ ...studentProfile, internship_role: value })
+                              setStudentProfile({ ...studentProfile, batch_id: value })
                             }
                           >
                             <SelectTrigger>
@@ -571,7 +571,7 @@ export default function Profile() {
                                 <SelectItem value="" disabled>No active batches available</SelectItem>
                               ) : (
                                 batches.map((batch) => (
-                                  <SelectItem key={batch.id} value={batch.name}>
+                                  <SelectItem key={batch.id} value={batch.id}>
                                     {batch.name}
                                   </SelectItem>
                                 ))
