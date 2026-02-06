@@ -53,7 +53,6 @@ const studentNavItems: NavItem[] = [
 ];
 
 const facultyNavItems: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Students", href: "/students", icon: Users },
   { title: "Resources", href: "/manage-resources", icon: Library },
   { title: "Internship Diaries", href: "/view-diaries", icon: BookOpen },

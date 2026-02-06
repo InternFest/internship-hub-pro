@@ -94,10 +94,12 @@ export default function Approvals() {
         .select("id, full_name, email, phone, avatar_url, date_of_birth, bio, linkedin_url, resume_url")
         .in("id", userIds);
 
-      // Fetch batches
+      // Fetch batches (only non-completed for filters)
+      const today = new Date().toISOString().split('T')[0];
       const { data: batchesData } = await supabase
         .from("batches")
-        .select("id, name")
+        .select("id, name, end_date")
+        .gt("end_date", today)
         .order("name");
 
       setBatches(batchesData || []);

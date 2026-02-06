@@ -82,10 +82,12 @@ export default function AdminDiaries() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch batches
+        // Fetch batches (only non-completed for filters)
+        const today = new Date().toISOString().split('T')[0];
         const { data: batchesData } = await supabase
           .from("batches")
-          .select("id, name")
+          .select("id, name, end_date")
+          .gt("end_date", today)
           .order("name");
 
         setBatches(batchesData || []);

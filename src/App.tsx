@@ -48,14 +48,33 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 // Public route wrapper (redirect if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, role, loading } = useAuth();
 
   if (loading) {
     return <LoadingScreen />;
   }
 
   if (user) {
+    // Redirect faculty to students page instead of dashboard
+    if (role === "faculty") {
+      return <Navigate to="/students" replace />;
+    }
     return <Navigate to="/dashboard" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// Faculty Dashboard Redirect wrapper
+function FacultyDashboardRedirect({ children }: { children: React.ReactNode }) {
+  const { role, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (role === "faculty") {
+    return <Navigate to="/students" replace />;
   }
 
   return <>{children}</>;
@@ -80,7 +99,9 @@ function AppRoutes() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <FacultyDashboardRedirect>
+              <Dashboard />
+            </FacultyDashboardRedirect>
           </ProtectedRoute>
         }
       />

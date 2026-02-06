@@ -116,10 +116,12 @@ export default function AdminProjects() {
 
         if (projectsError) throw projectsError;
 
-        // Fetch batches
+        // Fetch batches (only non-completed for filters)
+        const today = new Date().toISOString().split('T')[0];
         const { data: batchesData, error: batchesError } = await supabase
           .from("batches")
-          .select("id, name")
+          .select("id, name, end_date")
+          .gt("end_date", today)
           .order("name");
 
         if (batchesError) throw batchesError;
@@ -175,7 +177,7 @@ export default function AdminProjects() {
       }
     };
 
-    if (role === "admin") {
+    if (role === "admin" || role === "faculty") {
       fetchData();
     }
   }, [role]);
@@ -233,14 +235,14 @@ export default function AdminProjects() {
     );
   }
 
-  if (role !== "admin") {
+  if (role !== "admin" && role !== "faculty") {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12 fade-in">
           <Shield className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
-            Only administrators can access this page.
+            Only administrators and faculty can access this page.
           </p>
         </div>
       </DashboardLayout>
