@@ -30,6 +30,7 @@ import { format, parseISO, isToday } from "date-fns";
 interface Batch {
   id: string;
   name: string;
+  assigned_faculty_id?: string | null;
 }
 
 interface LeaveRequest {
@@ -61,6 +62,7 @@ export default function AdminLeaves() {
   const [filteredRequests, setFilteredRequests] = useState<LeaveRequest[]>([]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [facultyBatchIds, setFacultyBatchIds] = useState<string[]>([]);
   
   // Filters
   const [dateFilter, setDateFilter] = useState("all");
@@ -72,14 +74,38 @@ export default function AdminLeaves() {
     const today = new Date().toISOString().split('T')[0];
     const { data } = await supabase
       .from("batches")
-      .select("id, name, end_date")
+      .select("id, name, end_date, assigned_faculty_id")
       .gt("end_date", today)
       .order("name");
-    setBatches(data || []);
+    
+    // For faculty, filter batches to only those assigned to them
+    if (role === "faculty" && user) {
+      const assignedBatches = (data || []).filter(b => b.assigned_faculty_id === user.id);
+      const assignedBatchIds = assignedBatches.map(b => b.id);
+      setFacultyBatchIds(assignedBatchIds);
+      setBatches(assignedBatches);
+    } else {
+      setBatches(data || []);
+    }
   };
 
   const fetchRequests = async () => {
     try {
+      // First get faculty batch IDs if faculty role
+      let assignedBatchIds: string[] = [];
+      if (role === "faculty" && user) {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: batchesData } = await supabase
+          .from("batches")
+          .select("id, assigned_faculty_id")
+          .gt("end_date", today);
+        
+        assignedBatchIds = (batchesData || [])
+          .filter(b => b.assigned_faculty_id === user.id)
+          .map(b => b.id);
+        setFacultyBatchIds(assignedBatchIds);
+      }
+
       // Fetch leave requests
       const { data: requestsData, error } = await supabase
         .from("leave_requests")
@@ -97,7 +123,7 @@ export default function AdminLeaves() {
       ]);
 
       // Merge data
-      const requestsWithProfiles = (requestsData || []).map(request => {
+      let requestsWithProfiles = (requestsData || []).map(request => {
         const userRole = userRolesRes.data?.find(r => r.user_id === request.user_id);
         return {
           ...request,
@@ -106,6 +132,19 @@ export default function AdminLeaves() {
           user_role: userRole?.role || "student",
         };
       });
+
+      // For faculty, filter to only show student leave requests from their assigned batches
+      if (role === "faculty" && assignedBatchIds.length > 0) {
+        requestsWithProfiles = requestsWithProfiles.filter(r => {
+          // Only show student requests from faculty's batches
+          if (r.user_role === "student") {
+            return r.student_profile?.batch_id && assignedBatchIds.includes(r.student_profile.batch_id);
+          }
+          return false; // Faculty shouldn't see other faculty leave requests
+        });
+      } else if (role === "faculty" && assignedBatchIds.length === 0) {
+        requestsWithProfiles = [];
+      }
 
       setRequests(requestsWithProfiles as unknown as LeaveRequest[]);
       setFilteredRequests(requestsWithProfiles as unknown as LeaveRequest[]);

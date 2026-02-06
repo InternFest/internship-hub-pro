@@ -75,16 +75,18 @@ interface Project {
 interface Batch {
   id: string;
   name: string;
+  assigned_faculty_id?: string | null;
 }
 
 const ITEMS_PER_PAGE = 20;
 
 export default function AdminProjects() {
-  const { role, loading: authLoading } = useAuth();
+  const { role, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [facultyBatchIds, setFacultyBatchIds] = useState<string[]>([]);
   const [courseFilter, setCourseFilter] = useState("all");
   const [batchFilter, setBatchFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
@@ -108,6 +110,29 @@ export default function AdminProjects() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Fetch batches (only non-completed for filters)
+        const { data: batchesData, error: batchesError } = await supabase
+          .from("batches")
+          .select("id, name, end_date, assigned_faculty_id")
+          .gt("end_date", today)
+          .order("name");
+
+        if (batchesError) throw batchesError;
+
+        // For faculty, filter batches to only those assigned to them
+        let availableBatches = batchesData || [];
+        let assignedBatchIds: string[] = [];
+        
+        if (role === "faculty" && user) {
+          availableBatches = availableBatches.filter(b => b.assigned_faculty_id === user.id);
+          assignedBatchIds = availableBatches.map(b => b.id);
+          setFacultyBatchIds(assignedBatchIds);
+        }
+        
+        setBatches(availableBatches);
+
         // Fetch projects
         const { data: projectsData, error: projectsError } = await supabase
           .from("projects")
@@ -115,16 +140,6 @@ export default function AdminProjects() {
           .order("created_at", { ascending: false });
 
         if (projectsError) throw projectsError;
-
-        // Fetch batches (only non-completed for filters)
-        const today = new Date().toISOString().split('T')[0];
-        const { data: batchesData, error: batchesError } = await supabase
-          .from("batches")
-          .select("id, name, end_date")
-          .gt("end_date", today)
-          .order("name");
-
-        if (batchesError) throw batchesError;
 
         // Fetch lead profiles and student profiles
         const leadIds = projectsData?.map(p => p.lead_id) || [];
@@ -153,7 +168,7 @@ export default function AdminProjects() {
           .in("user_id", memberUserIds);
 
         // Build projects with all data
-        const projectsWithData = (projectsData || []).map(project => ({
+        let projectsWithData = (projectsData || []).map(project => ({
           ...project,
           lead_profile: profilesRes.data?.find(p => p.id === project.lead_id) || null,
           lead_student: studentProfilesRes.data?.find(sp => sp.user_id === project.lead_id) || null,
@@ -167,9 +182,17 @@ export default function AdminProjects() {
             })),
         }));
 
+        // For faculty, filter projects to only those from their assigned batches
+        if (role === "faculty" && assignedBatchIds.length > 0) {
+          projectsWithData = projectsWithData.filter(
+            p => p.lead_student?.batch_id && assignedBatchIds.includes(p.lead_student.batch_id)
+          );
+        } else if (role === "faculty" && assignedBatchIds.length === 0) {
+          projectsWithData = [];
+        }
+
         setProjects(projectsWithData as unknown as Project[]);
         setFilteredProjects(projectsWithData as unknown as Project[]);
-        setBatches(batchesData || []);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -180,7 +203,7 @@ export default function AdminProjects() {
     if (role === "admin" || role === "faculty") {
       fetchData();
     }
-  }, [role]);
+  }, [role, user]);
 
   useEffect(() => {
     let result = projects;
