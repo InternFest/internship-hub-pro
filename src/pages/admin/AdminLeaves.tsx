@@ -69,7 +69,12 @@ export default function AdminLeaves() {
   const [userTypeFilter, setUserTypeFilter] = useState("all");
 
   const fetchBatches = async () => {
-    const { data } = await supabase.from("batches").select("id, name");
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from("batches")
+      .select("id, name, end_date")
+      .gt("end_date", today)
+      .order("name");
     setBatches(data || []);
   };
 
@@ -112,7 +117,7 @@ export default function AdminLeaves() {
   };
 
   useEffect(() => {
-    if (role === "admin") {
+    if (role === "admin" || role === "faculty") {
       fetchRequests();
       fetchBatches();
     }
@@ -206,14 +211,17 @@ export default function AdminLeaves() {
   const facultyRequests = requests.filter(r => r.user_role === "faculty");
   const pendingRequests = requests.filter(r => r.status === "pending");
 
-  if (role !== "admin") {
+  // Only admin can approve/reject, but faculty can view
+  const canManage = role === "admin";
+
+  if (role !== "admin" && role !== "faculty") {
     return (
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center py-12 fade-in">
           <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
           <p className="text-muted-foreground">
-            Only administrators can access this page.
+            Only administrators and faculty can access this page.
           </p>
         </div>
       </DashboardLayout>
@@ -414,7 +422,7 @@ export default function AdminLeaves() {
                         </TableCell>
                         <TableCell>{getStatusBadge(request.status)}</TableCell>
                         <TableCell className="text-right">
-                          {request.status === "pending" ? (
+                          {request.status === "pending" && canManage ? (
                             <div className="flex justify-end gap-2">
                               <Button
                                 size="sm"
@@ -444,7 +452,9 @@ export default function AdminLeaves() {
                               </Button>
                             </div>
                           ) : (
-                            <span className="text-sm text-muted-foreground">—</span>
+                            <span className="text-sm text-muted-foreground">
+                              {request.status === "pending" ? "View only" : "—"}
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>

@@ -87,7 +87,12 @@ export default function AdminQueriesManagement() {
   const [courseFilter, setCourseFilter] = useState("all");
 
   const fetchBatches = async () => {
-    const { data } = await supabase.from("batches").select("id, name");
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from("batches")
+      .select("id, name, end_date")
+      .gt("end_date", today)
+      .order("name");
     setBatches(data || []);
   };
 

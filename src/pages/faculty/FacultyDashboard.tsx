@@ -78,6 +78,7 @@ export default function FacultyDashboard() {
           }
         }
 
+        const today = new Date().toISOString().split('T')[0];
         const [studentsRes, diariesRes, batchesRes] = await Promise.all([
           supabase
             .from("student_profiles")
@@ -89,7 +90,8 @@ export default function FacultyDashboard() {
             .order("entry_date", { ascending: false }),
           supabase
             .from("batches")
-            .select("id, name")
+            .select("id, name, end_date")
+            .gt("end_date", today)
             .order("name"),
         ]);
 

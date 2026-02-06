@@ -16,7 +16,9 @@ import {
   Users,
   Shield,
   MessageSquare,
+  PlayCircle,
 } from "lucide-react";
+import { filterOngoingBatches, filterCompletedBatches, Batch } from "@/lib/batchUtils";
 
 interface StudentStats {
   diaryEntries: number;
@@ -34,11 +36,8 @@ interface AdminStats {
   pendingQueries: number;
 }
 
-interface BatchStats {
-  vlsi: number;
-  aiMl: number;
-  mern: number;
-  java: number;
+interface BatchWithStudentCount extends Batch {
+  studentCount: number;
 }
 
 export default function Dashboard() {
@@ -58,12 +57,8 @@ export default function Dashboard() {
     pendingLeaves: 0,
     pendingQueries: 0,
   });
-  const [batchStats, setBatchStats] = useState<BatchStats>({
-    vlsi: 0,
-    aiMl: 0,
-    mern: 0,
-    java: 0,
-  });
+  const [ongoingBatches, setOngoingBatches] = useState<BatchWithStudentCount[]>([]);
+  const [completedBatches, setCompletedBatches] = useState<BatchWithStudentCount[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -130,7 +125,8 @@ export default function Dashboard() {
             { count: facultyCount },
             { count: leavesCount },
             { count: queriesCount },
-            { data: roleData },
+            { data: studentProfiles },
+            { data: batchesData },
           ] = await Promise.all([
             supabase
               .from("student_profiles")
@@ -154,18 +150,30 @@ export default function Dashboard() {
               .eq("is_resolved", false),
             supabase
               .from("student_profiles")
-              .select("internship_role")
+              .select("batch_id")
               .eq("status", "approved"),
+            supabase
+              .from("batches")
+              .select("id, name, start_date, end_date")
+              .order("name"),
           ]);
 
-          // Calculate batch-wise stats
-          const roles = roleData || [];
-          setBatchStats({
-            vlsi: roles.filter((r) => r.internship_role === "vlsi").length,
-            aiMl: roles.filter((r) => r.internship_role === "ai-ml").length,
-            mern: roles.filter((r) => r.internship_role === "mern").length,
-            java: roles.filter((r) => r.internship_role === "java").length,
-          });
+          // Calculate batch-wise student counts
+          const allBatches = (batchesData || []) as Batch[];
+          const batchStudentCounts = (studentProfiles || []).reduce((acc, sp) => {
+            if (sp.batch_id) {
+              acc[sp.batch_id] = (acc[sp.batch_id] || 0) + 1;
+            }
+            return acc;
+          }, {} as Record<string, number>);
+
+          const batchesWithCounts: BatchWithStudentCount[] = allBatches.map(b => ({
+            ...b,
+            studentCount: batchStudentCounts[b.id] || 0,
+          }));
+
+          setOngoingBatches(filterOngoingBatches(batchesWithCounts) as BatchWithStudentCount[]);
+          setCompletedBatches(filterCompletedBatches(batchesWithCounts) as BatchWithStudentCount[]);
 
           setAdminStats({
             pendingApprovals: pendingCount || 0,
@@ -356,28 +364,10 @@ export default function Dashboard() {
     );
   }
 
-  // Faculty Dashboard
+  // Faculty Dashboard - redirect to students page
   if (role === "faculty") {
-    return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div className="fade-in">
-            <h1 className="text-2xl font-bold md:text-3xl">Faculty Dashboard</h1>
-            <p className="text-muted-foreground">Monitor student progress and internship activities.</p>
-          </div>
-
-          <Card className="slide-up card-hover">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Users className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
-              <h3 className="text-lg font-semibold">Read-Only Access</h3>
-              <p className="text-center text-muted-foreground">
-                As faculty, you can view student profiles, diaries, projects, and leave requests.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </DashboardLayout>
-    );
+    // Import Navigate at the top and use it here
+    return null; // Will be handled by App.tsx redirect
   }
 
   // Admin Dashboard
@@ -453,53 +443,67 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* Batch-wise Stats */}
-          <Card className="slide-up" style={{ animationDelay: '0.35s' }}>
-            <CardHeader>
-              <CardTitle>Batch-wise Student Statistics</CardTitle>
-              <CardDescription>Students enrolled by internship track</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="flex items-center gap-4 rounded-lg border p-4 transition-smooth hover:shadow-md hover:border-primary/20">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
-                    <span className="font-bold">V</span>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{batchStats.vlsi}</p>
-                    <p className="text-sm text-muted-foreground">VLSI</p>
-                  </div>
+          {/* Batch-wise Stats - Ongoing Batches */}
+          {ongoingBatches.length > 0 && (
+            <Card className="slide-up" style={{ animationDelay: '0.35s' }}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PlayCircle className="h-5 w-5 text-success" />
+                  Ongoing Batches
+                </CardTitle>
+                <CardDescription>Currently active batches with enrolled students</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {ongoingBatches.map((batch, index) => (
+                    <div 
+                      key={batch.id} 
+                      className="flex items-center gap-4 rounded-lg border border-success/20 bg-success/5 p-4 transition-smooth hover:shadow-md hover:border-success/40"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/20 text-success">
+                        <GraduationCap className="h-6 w-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-2xl font-bold">{batch.studentCount}</p>
+                        <p className="text-sm text-muted-foreground truncate">{batch.name}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center gap-4 rounded-lg border p-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
-                    <span className="font-bold">AI</span>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{batchStats.aiMl}</p>
-                    <p className="text-sm text-muted-foreground">AI / ML</p>
-                  </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Batch-wise Stats - Completed Batches */}
+          {completedBatches.length > 0 && (
+            <Card className="slide-up" style={{ animationDelay: '0.4s' }}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-muted-foreground" />
+                  Completed Batches
+                </CardTitle>
+                <CardDescription>Past batches that have concluded</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {completedBatches.map((batch) => (
+                    <div 
+                      key={batch.id} 
+                      className="flex items-center gap-4 rounded-lg border bg-muted/30 p-4 transition-smooth hover:shadow-md"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                        <GraduationCap className="h-6 w-6" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-2xl font-bold">{batch.studentCount}</p>
+                        <p className="text-sm text-muted-foreground truncate">{batch.name}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex items-center gap-4 rounded-lg border p-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-700">
-                    <span className="font-bold">M</span>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{batchStats.mern}</p>
-                    <p className="text-sm text-muted-foreground">MERN</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4 rounded-lg border p-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
-                    <span className="font-bold">J</span>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{batchStats.java}</p>
-                    <p className="text-sm text-muted-foreground">Java</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </DashboardLayout>
     );

@@ -54,6 +54,7 @@ interface Resource {
 interface Batch {
   id: string;
   name: string;
+  assigned_faculty_id?: string | null;
 }
 
 export default function AdminResources() {
@@ -80,25 +81,50 @@ export default function AdminResources() {
 
   const fetchData = async () => {
     try {
-      // Fetch all resources with batch info
-      const { data: resourcesData, error: resourcesError } = await supabase
+      // Fetch batches first (only non-completed for creating new resources)
+      const today = new Date().toISOString().split('T')[0];
+      const { data: batchesData, error: batchesError } = await supabase
+        .from("batches")
+        .select("id, name, end_date, assigned_faculty_id")
+        .gt("end_date", today)
+        .order("name");
+
+      if (batchesError) throw batchesError;
+
+      // For faculty, filter to only their assigned batches
+      let availableBatches = batchesData || [];
+      if (role === "faculty" && user) {
+        availableBatches = availableBatches.filter(b => b.assigned_faculty_id === user.id);
+      }
+      setBatches(availableBatches);
+
+      // Get batch IDs for faculty filtering
+      const facultyBatchIds = role === "faculty" && user
+        ? availableBatches.map(b => b.id)
+        : null;
+
+      // Fetch resources with batch info
+      let resourcesQuery = supabase
         .from("resources")
         .select("*, batches(name)")
         .order("batch_id")
         .order("module_number")
         .order("created_at", { ascending: false });
 
+      // For faculty, only fetch resources from their assigned batches
+      if (facultyBatchIds && facultyBatchIds.length > 0) {
+        resourcesQuery = resourcesQuery.in("batch_id", facultyBatchIds);
+      } else if (facultyBatchIds && facultyBatchIds.length === 0) {
+        // Faculty has no assigned batches
+        setResources([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data: resourcesData, error: resourcesError } = await resourcesQuery;
+
       if (resourcesError) throw resourcesError;
       setResources((resourcesData as Resource[]) || []);
-
-      // Fetch batches
-      const { data: batchesData, error: batchesError } = await supabase
-        .from("batches")
-        .select("id, name")
-        .order("name");
-
-      if (batchesError) throw batchesError;
-      setBatches(batchesData || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
