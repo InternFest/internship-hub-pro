@@ -49,6 +49,7 @@ interface DiaryEntry {
 interface Batch {
   id: string;
   name: string;
+  assigned_faculty_id?: string | null;
 }
 
 export default function FacultyDashboard() {
@@ -58,6 +59,7 @@ export default function FacultyDashboard() {
   const [students, setStudents] = useState<Student[]>([]);
   const [diaryEntries, setDiaryEntries] = useState<DiaryEntry[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [facultyBatchIds, setFacultyBatchIds] = useState<string[]>([]);
   const [batchFilter, setBatchFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
   const [diaryTab, setDiaryTab] = useState("submitted");
@@ -79,37 +81,56 @@ export default function FacultyDashboard() {
         }
 
         const today = new Date().toISOString().split('T')[0];
-        const [studentsRes, diariesRes, batchesRes] = await Promise.all([
-          supabase
-            .from("student_profiles")
-            .select("id, user_id, student_id, batch_id")
-            .eq("status", "approved"),
-          supabase
-            .from("internship_diary")
-            .select("id, entry_date, user_id")
-            .order("entry_date", { ascending: false }),
-          supabase
-            .from("batches")
-            .select("id, name, end_date")
-            .gt("end_date", today)
-            .order("name"),
+        
+        // First fetch batches assigned to this faculty
+        const { data: allBatchesData } = await supabase
+          .from("batches")
+          .select("id, name, end_date, assigned_faculty_id")
+          .gt("end_date", today)
+          .order("name");
+        
+        // Filter batches assigned to this faculty
+        const assignedBatches = (allBatchesData || []).filter(
+          b => b.assigned_faculty_id === user?.id
+        );
+        const assignedBatchIds = assignedBatches.map(b => b.id);
+        setFacultyBatchIds(assignedBatchIds);
+        setBatches(assignedBatches);
+
+        // If no batches assigned, set empty data
+        if (assignedBatchIds.length === 0) {
+          setStudents([]);
+          setDiaryEntries([]);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch students only from faculty's assigned batches
+        const { data: studentsData } = await supabase
+          .from("student_profiles")
+          .select("id, user_id, student_id, batch_id")
+          .eq("status", "approved")
+          .in("batch_id", assignedBatchIds);
+
+        // Fetch profiles for these students
+        const userIds = studentsData?.map(s => s.user_id) || [];
+        
+        const [profilesRes, diariesRes] = await Promise.all([
+          userIds.length > 0 
+            ? supabase.from("profiles").select("id, full_name, email, phone").in("id", userIds)
+            : Promise.resolve({ data: [] }),
+          userIds.length > 0
+            ? supabase.from("internship_diary").select("id, entry_date, user_id").in("user_id", userIds).order("entry_date", { ascending: false })
+            : Promise.resolve({ data: [] }),
         ]);
 
-        // Fetch profiles
-        const userIds = studentsRes.data?.map(s => s.user_id) || [];
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, full_name, email, phone")
-          .in("id", userIds);
-
-        const studentsWithProfiles = (studentsRes.data || []).map(s => ({
+        const studentsWithProfiles = (studentsData || []).map(s => ({
           ...s,
-          profile: profilesData?.find(p => p.id === s.user_id) || null,
+          profile: profilesRes.data?.find(p => p.id === s.user_id) || null,
         }));
 
         setStudents(studentsWithProfiles as Student[]);
         setDiaryEntries(diariesRes.data || []);
-        setBatches(batchesRes.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -117,7 +138,7 @@ export default function FacultyDashboard() {
       }
     };
 
-    if (role === "faculty") {
+    if (role === "faculty" && user) {
       fetchData();
     }
   }, [role, user]);
