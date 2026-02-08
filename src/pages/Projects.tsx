@@ -87,6 +87,8 @@ export default function Projects() {
   const [searching, setSearching] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
   const [joiningProject, setJoiningProject] = useState<string | null>(null);
+  const [userBatchId, setUserBatchId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Form state
   const [projectName, setProjectName] = useState("");
@@ -97,6 +99,15 @@ export default function Projects() {
     if (!user) return;
 
     try {
+      // First get the user's batch_id
+      const { data: studentProfile } = await supabase
+        .from("student_profiles")
+        .select("batch_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      const batchId = studentProfile?.batch_id;
+      setUserBatchId(batchId);
       // Get projects where user is lead
       const { data: leadProjects, error: leadError } = await supabase
         .from("projects")
@@ -176,13 +187,27 @@ export default function Projects() {
   };
 
   const fetchAllProjects = async () => {
-    if (!user) return;
+    if (!user || !userBatchId) return;
 
     try {
-      // Get all projects for joining
+      // Get student profiles for users in the same batch to filter projects
+      const { data: batchStudents } = await supabase
+        .from("student_profiles")
+        .select("user_id")
+        .eq("batch_id", userBatchId);
+
+      const batchUserIds = batchStudents?.map(s => s.user_id) || [];
+      
+      if (batchUserIds.length === 0) {
+        setAllProjects([]);
+        return;
+      }
+
+      // Get projects where lead is from the same batch
       const { data: projectsData, error } = await supabase
         .from("projects")
         .select("*")
+        .in("lead_id", batchUserIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -666,24 +691,51 @@ export default function Projects() {
           </Dialog>
         </div>
 
+        {/* Search Bar */}
+        <Card className="slide-up">
+          <CardContent className="pt-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by project name or lead name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Projects List */}
-        {projects.length === 0 ? (
+        {(() => {
+          const filteredProjects = projects.filter(p => {
+            if (!searchQuery.trim()) return true;
+            const query = searchQuery.toLowerCase().trim();
+            const leadName = p.members.find(m => m.user_id === p.lead_id)?.profile?.full_name?.toLowerCase() || "";
+            return p.name.toLowerCase().includes(query) || 
+                   (p.description?.toLowerCase().includes(query) || false) ||
+                   leadName.includes(query);
+          });
+
+          return filteredProjects.length === 0 ? (
           <Card className="fade-in card-hover">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <FolderKanban className="mb-4 h-12 w-12 text-muted-foreground" />
-              <h3 className="text-lg font-semibold">No projects yet</h3>
+              <h3 className="text-lg font-semibold">{searchQuery ? "No matching projects" : "No projects yet"}</h3>
               <p className="mb-4 text-muted-foreground">
-                Create your first project or join an existing team.
+                {searchQuery ? "Try adjusting your search." : "Create your first project or join an existing team."}
               </p>
-              <Button onClick={() => setConfirmOpen(true)} className="transition-smooth hover:scale-105">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Project
-              </Button>
+              {!searchQuery && (
+                <Button onClick={() => setConfirmOpen(true)} className="transition-smooth hover:scale-105">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Project
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {projects.map((project, index) => {
+            {filteredProjects.map((project, index) => {
               const isLeader = project.lead_id === user?.id;
               return (
                 <Card key={project.id} className="card-hover slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
@@ -754,7 +806,8 @@ export default function Projects() {
               );
             })}
           </div>
-        )}
+        );
+        })()}
       </div>
 
       {/* Add Member Dialog */}

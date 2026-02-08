@@ -87,7 +87,6 @@ export default function AdminProjects() {
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [facultyBatchIds, setFacultyBatchIds] = useState<string[]>([]);
-  const [courseFilter, setCourseFilter] = useState("all");
   const [batchFilter, setBatchFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -105,7 +104,7 @@ export default function AdminProjects() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [courseFilter, batchFilter, dateFilter, searchQuery]);
+  }, [batchFilter, dateFilter, searchQuery]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -219,10 +218,7 @@ export default function AdminProjects() {
       );
     }
 
-    if (courseFilter !== "all") {
-      result = result.filter((p) => p.lead_student?.internship_role === courseFilter);
-    }
-
+    // Batch filter
     if (batchFilter !== "all") {
       result = result.filter((p) => p.lead_student?.batch_id === batchFilter);
     }
@@ -232,7 +228,7 @@ export default function AdminProjects() {
     }
 
     setFilteredProjects(result);
-  }, [courseFilter, batchFilter, dateFilter, searchQuery, projects]);
+  }, [batchFilter, dateFilter, searchQuery, projects]);
 
   const getRoleBadgeColor = (role: string | null) => {
     switch (role) {
@@ -308,23 +304,7 @@ export default function AdminProjects() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label>Course</Label>
-                <Select value={courseFilter} onValueChange={setCourseFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Courses</SelectItem>
-                    <SelectItem value="ai-ml">AI-ML</SelectItem>
-                    <SelectItem value="java">Java</SelectItem>
-                    <SelectItem value="vlsi">VLSI</SelectItem>
-                    <SelectItem value="mern">MERN</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Batch</Label>
                 <Select value={batchFilter} onValueChange={setBatchFilter}>
