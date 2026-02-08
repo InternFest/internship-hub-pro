@@ -5,7 +5,6 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, BookOpen, Video, FileText, File, Lock, Upload, AlertCircle } from "lucide-react";
 import { z } from "zod";
 import { resourceSchema } from "@/lib/validations";
+import { RichTextEditor } from "@/components/RichTextEditor";
 
 interface Resource {
   id: string;
@@ -402,12 +402,11 @@ export default function AdminResources() {
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
-                  <Textarea
+                  <Input
                     id="description"
                     placeholder="Brief description..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows={2}
                   />
                 </div>
 
@@ -466,12 +465,13 @@ export default function AdminResources() {
                 {resourceType === "text" && (
                   <div className="space-y-2">
                     <Label htmlFor="textContent">Text Content *</Label>
-                    <Textarea
-                      id="textContent"
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Use the toolbar to format text with bold, lists, headings, highlights, and more.
+                    </p>
+                    <RichTextEditor
+                      content={contentText}
+                      onChange={setContentText}
                       placeholder="Enter your content here..."
-                      value={contentText}
-                      onChange={(e) => setContentText(e.target.value)}
-                      rows={8}
                       className={errors.contentText ? "border-destructive" : ""}
                     />
                     {errors.contentText && (

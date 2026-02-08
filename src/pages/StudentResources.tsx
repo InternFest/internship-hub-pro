@@ -21,6 +21,7 @@ import { SkeletonTable } from "@/components/SkeletonCard";
 import { BookOpen, Video, FileText, File, Lock, ExternalLink, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { RichTextContent } from "@/components/RichTextEditor";
 
 interface Resource {
   id: string;
@@ -271,8 +272,8 @@ export default function StudentResources() {
 
           {selectedResource?.resource_type === "text" && selectedResource.content_text && (
             <ScrollArea className="max-h-[60vh]">
-              <div className="prose prose-sm dark:prose-invert max-w-none p-4">
-                <pre className="whitespace-pre-wrap font-sans">{selectedResource.content_text}</pre>
+              <div className="resource-content-view rounded-lg border bg-card p-6">
+                <RichTextContent content={selectedResource.content_text} />
               </div>
             </ScrollArea>
           )}
