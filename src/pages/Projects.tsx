@@ -510,6 +510,11 @@ export default function Projects() {
             <p className="text-muted-foreground">Manage your team projects.</p>
           </div>
 
+          <Button onClick={() => setConfirmOpen(true)} className="transition-smooth hover:scale-105">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Project
+          </Button>
+
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) {
@@ -519,12 +524,6 @@ export default function Projects() {
               setErrors({});
             }
           }}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setConfirmOpen(true)} className="transition-smooth hover:scale-105">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Project
-              </Button>
-            </DialogTrigger>
             <DialogContent className="scale-in">
               <DialogHeader>
                 <DialogTitle>Create New Project</DialogTitle>
