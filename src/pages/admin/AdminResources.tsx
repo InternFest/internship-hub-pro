@@ -214,12 +214,9 @@ export default function AdminResources() {
 
         if (uploadError) throw uploadError;
 
-        // Get signed URL for private bucket
-        const { data: signedData } = await supabase.storage
-          .from("resource-files")
-          .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year expiry
-
-        pdfUrl = signedData?.signedUrl || filePath;
+        // Store the file path, NOT the signed URL
+        // Signed URLs will be generated on-demand when viewing
+        pdfUrl = filePath;
         setUploading(false);
       }
 

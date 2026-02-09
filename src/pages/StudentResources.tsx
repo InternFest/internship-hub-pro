@@ -106,7 +106,7 @@ export default function StudentResources() {
     }
   };
 
-  const handleResourceClick = (resource: Resource) => {
+  const handleResourceClick = async (resource: Resource) => {
     if (resource.resource_type === "video" && resource.content_url) {
       // Open video in dialog or new tab
       setSelectedResource(resource);
@@ -115,8 +115,22 @@ export default function StudentResources() {
       setSelectedResource(resource);
       setDialogOpen(true);
     } else if (resource.resource_type === "notes" && resource.pdf_url) {
-      // Open PDF in new tab
-      window.open(resource.pdf_url, "_blank");
+      // Generate signed URL on-demand for PDF access
+      try {
+        const { data: signedData, error } = await supabase.storage
+          .from("resource-files")
+          .createSignedUrl(resource.pdf_url, 3600); // 1 hour expiry
+
+        if (error) throw error;
+        
+        if (signedData?.signedUrl) {
+          window.open(signedData.signedUrl, "_blank");
+        }
+      } catch (error) {
+        console.error("Error generating PDF URL:", error);
+        // Fallback: try opening the stored URL directly (for legacy data)
+        window.open(resource.pdf_url, "_blank");
+      }
     }
   };
 
