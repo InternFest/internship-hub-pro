@@ -22,6 +22,7 @@ import { BookOpen, Video, FileText, File, Lock, ExternalLink, Play, Download } f
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { RichTextContent } from "@/components/RichTextEditor";
+import { useToast } from "@/hooks/use-toast";
 
 interface Resource {
   id: string;
@@ -38,6 +39,7 @@ interface Resource {
 
 export default function StudentResources() {
   const { user, studentStatus } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [resources, setResources] = useState<Resource[]>([]);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
@@ -125,52 +127,51 @@ export default function StudentResources() {
     if (!resource.pdf_url) return;
 
     try {
-      // Download as blob to avoid ad-blocker issues with Supabase domain
-      const { data, error } = await supabase.storage
-        .from("resource-files")
-        .download(resource.pdf_url);
+      let blob: Blob;
 
-      if (error) throw error;
+      // Check if it's a full URL or storage path
+      if (resource.pdf_url.startsWith('http')) {
+        // Full URL - fetch directly
+        const response = await fetch(resource.pdf_url);
+        if (!response.ok) throw new Error('Failed to fetch PDF');
+        blob = await response.blob();
+      } else {
+        // Storage path - use Supabase storage
+        const { data, error } = await supabase.storage
+          .from("resource-files")
+          .download(resource.pdf_url);
 
-      if (data) {
-        // Create blob URL and trigger download
-        const url = URL.createObjectURL(data);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = resource.title + ".pdf";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (error) throw error;
+        if (!data) throw new Error('No data returned');
+
+        blob = data;
       }
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${resource.title}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Download started",
+        description: "Your PDF is being downloaded.",
+      });
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      // Fallback for legacy data with full URLs
-      window.open(resource.pdf_url, "_blank");
+      toast({
+        title: "Download failed",
+        description: "Unable to download the PDF. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleViewPdf = async (resource: Resource) => {
-    if (!resource.pdf_url) return;
 
-    try {
-      // Download as blob to avoid ad-blocker issues
-      const { data, error } = await supabase.storage
-        .from("resource-files")
-        .download(resource.pdf_url);
-
-      if (error) throw error;
-
-      if (data) {
-        // Create blob URL and open in new tab
-        const url = URL.createObjectURL(data);
-        window.open(url, "_blank");
-      }
-    } catch (error) {
-      console.error("Error viewing PDF:", error);
-      window.open(resource.pdf_url, "_blank");
-    }
-  };
 
   const getVideoEmbedUrl = (url: string) => {
     // Convert YouTube watch URL to embed URL
@@ -334,16 +335,9 @@ export default function StudentResources() {
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
               <File className="h-16 w-16 text-success" />
               <p className="text-muted-foreground text-center">
-                Click the buttons below to view or download this PDF document.
+                Click the buttons below download this PDF document.
               </p>
               <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => handleViewPdf(selectedResource)}
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View PDF
-                </Button>
                 <Button onClick={() => handleDownloadPdf(selectedResource)}>
                   <Download className="mr-2 h-4 w-4" />
                   Download PDF
