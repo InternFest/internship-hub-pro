@@ -255,6 +255,13 @@ export default function Projects() {
     fetchProjects();
   }, [user]);
 
+  // Fetch all batch projects when userBatchId is set (for join dialog)
+  useEffect(() => {
+    if (userBatchId && joinDialogOpen) {
+      fetchAllProjects();
+    }
+  }, [userBatchId, joinDialogOpen]);
+
   const handleCreateProject = async () => {
     if (!user) return;
 
@@ -590,7 +597,7 @@ export default function Projects() {
               <AlertDialogFooter>
                 <AlertDialogCancel onClick={() => {
                   setConfirmOpen(false);
-                  fetchAllProjects();
+                  // useEffect will trigger fetchAllProjects when joinDialogOpen changes
                   setJoinDialogOpen(true);
                 }}>
                   No, I'm joining a team
