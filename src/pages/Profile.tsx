@@ -176,6 +176,11 @@ export default function Profile() {
           }
         });
         setErrors(fieldErrors);
+        toast({
+          title: "Validation Error",
+          description: "Please fix the highlighted fields.",
+          variant: "destructive",
+        });
         return;
       }
     }

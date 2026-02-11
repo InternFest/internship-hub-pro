@@ -27,6 +27,7 @@ import AdminLeaves from "./pages/admin/AdminLeaves";
 import AdminQueriesManagement from "./pages/admin/AdminQueriesManagement";
 import AdminProjects from "./pages/admin/AdminProjects";
 import AdminResources from "./pages/admin/AdminResources";
+import ForgotPassword from "./pages/ForgotPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -237,6 +238,10 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
+      {/* Password Reset */}
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ForgotPassword />} />
 
       {/* Catch-all */}
       <Route path="*" element={<NotFound />} />
