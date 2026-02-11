@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, Loader2, ArrowLeft, Mail, Eye, EyeOff, CheckCircle } from "lucide-react";
+import { GraduationCap, Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -21,10 +21,11 @@ const passwordSchema = z.object({
   path: ["confirmPassword"],
 });
 
-type Step = "email" | "sent" | "reset";
+type Step = "email" | "reset";
 
 export default function ForgotPassword() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>("email");
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
@@ -33,15 +34,7 @@ export default function ForgotPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Check if we arrived via a recovery link (hash contains type=recovery)
-  useState(() => {
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery")) {
-      setStep("reset");
-    }
-  });
-
-  const handleSendResetEmail = async (e: React.FormEvent) => {
+  const handleEmailCheck = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
@@ -59,21 +52,29 @@ export default function ForgotPassword() {
     }
 
     setIsLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    // Check if profile with this email exists
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
     setIsLoading(false);
 
     if (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       });
       return;
     }
 
-    setStep("sent");
+    if (!data) {
+      setErrors({ email: "No account found with this email address" });
+      return;
+    }
+
+    setStep("reset");
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
@@ -94,13 +95,30 @@ export default function ForgotPassword() {
     }
 
     setIsLoading(true);
-    const { error } = await supabase.auth.updateUser({ password });
+    // Sign in with email to get a session, then update password
+    // Since we can't update password without a session, we use admin-level approach
+    // For simplicity, we sign the user in first then update
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password: password,
+    });
+
+    // If sign-in succeeds with the new password, it means it's already set
+    // We need a different approach - use the Supabase admin API via edge function
+    
+    // Actually, Supabase requires authentication to update password.
+    // The simplest approach without email: sign in with OTP or use an edge function.
+    // Let's create an edge function to handle this.
+    
+    const { error } = await supabase.functions.invoke("reset-password", {
+      body: { email, newPassword: password },
+    });
     setIsLoading(false);
 
     if (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to reset password. Please try again.",
         variant: "destructive",
       });
       return;
@@ -111,10 +129,9 @@ export default function ForgotPassword() {
       description: "Your password has been reset successfully. You can now sign in.",
     });
 
-    // Redirect to login after short delay
     setTimeout(() => {
-      window.location.href = "/auth?mode=login";
-    }, 2000);
+      navigate("/auth?mode=login");
+    }, 1500);
   };
 
   return (
@@ -136,32 +153,21 @@ export default function ForgotPassword() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-lg">
               <GraduationCap className="h-7 w-7 text-primary-foreground" />
             </div>
-
-            {step === "email" && (
-              <div>
-                <CardTitle className="text-2xl font-bold">Forgot Password</CardTitle>
-                <CardDescription>Enter your email to receive a password reset link</CardDescription>
-              </div>
-            )}
-
-            {step === "sent" && (
-              <div>
-                <CardTitle className="text-2xl font-bold">Check Your Email</CardTitle>
-                <CardDescription>We've sent a password reset link to your email</CardDescription>
-              </div>
-            )}
-
-            {step === "reset" && (
-              <div>
-                <CardTitle className="text-2xl font-bold">Reset Password</CardTitle>
-                <CardDescription>Enter your new password below</CardDescription>
-              </div>
-            )}
+            <div>
+              <CardTitle className="text-2xl font-bold">
+                {step === "email" ? "Forgot Password" : "Reset Password"}
+              </CardTitle>
+              <CardDescription>
+                {step === "email"
+                  ? "Enter your registered email address"
+                  : "Create a new password for your account"}
+              </CardDescription>
+            </div>
           </CardHeader>
 
           <CardContent>
             {step === "email" && (
-              <form onSubmit={handleSendResetEmail} className="space-y-4">
+              <form onSubmit={handleEmailCheck} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="reset-email">Email Address</Label>
                   <Input
@@ -182,41 +188,23 @@ export default function ForgotPassword() {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
+                      Checking...
                     </>
                   ) : (
-                    <>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Send Reset Link
-                    </>
+                    "Continue"
                   )}
                 </Button>
               </form>
             )}
 
-            {step === "sent" && (
-              <div className="space-y-4 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
-                  <CheckCircle className="h-8 w-8 text-success" />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  A password reset link has been sent to <strong className="text-foreground">{email}</strong>.
-                  Please check your inbox and click the link to reset your password.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Didn't receive the email? Check your spam folder or{" "}
-                  <button
-                    onClick={() => setStep("email")}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    try again
-                  </button>
-                </p>
-              </div>
-            )}
-
             {step === "reset" && (
               <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="rounded-md bg-muted p-3">
+                  <p className="text-sm text-muted-foreground">
+                    Resetting password for <strong className="text-foreground">{email}</strong>
+                  </p>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="new-password">New Password</Label>
                   <div className="relative">
@@ -258,16 +246,32 @@ export default function ForgotPassword() {
                   )}
                 </div>
 
-                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Resetting...
-                    </>
-                  ) : (
-                    "Reset Password"
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setStep("email");
+                      setPassword("");
+                      setConfirmPassword("");
+                      setErrors({});
+                    }}
+                    disabled={isLoading}
+                  >
+                    Back
+                  </Button>
+                  <Button type="submit" className="flex-1" size="lg" disabled={isLoading}>
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Resetting...
+                      </>
+                    ) : (
+                      "Reset Password"
+                    )}
+                  </Button>
+                </div>
               </form>
             )}
           </CardContent>
