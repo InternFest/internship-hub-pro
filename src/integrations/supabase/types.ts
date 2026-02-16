@@ -47,6 +47,94 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_submissions: {
+        Row: {
+          assignment_id: string
+          file_name: string
+          file_url: string
+          id: string
+          student_id: string
+          submitted_at: string
+        }
+        Insert: {
+          assignment_id: string
+          file_name: string
+          file_url: string
+          id?: string
+          student_id: string
+          submitted_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          student_id?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          assignment_number: number
+          batch_id: string
+          created_at: string
+          created_by: string
+          deadline: string
+          description: string | null
+          id: string
+          links: string | null
+          pdf_url: string | null
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_number?: number
+          batch_id: string
+          created_at?: string
+          created_by: string
+          deadline: string
+          description?: string | null
+          id?: string
+          links?: string | null
+          pdf_url?: string | null
+          start_date?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_number?: number
+          batch_id?: string
+          created_at?: string
+          created_by?: string
+          deadline?: string
+          description?: string | null
+          id?: string
+          links?: string | null
+          pdf_url?: string | null
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignments_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batches: {
         Row: {
           assigned_faculty_id: string | null

@@ -28,12 +28,13 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, BookOpen, Video, FileText, File, Lock, Upload, AlertCircle } from "lucide-react";
+import { Loader2, Plus, BookOpen, Video, FileText, File, Lock, Upload, AlertCircle, Play, Download, ExternalLink } from "lucide-react";
 import { z } from "zod";
 import { resourceSchema } from "@/lib/validations";
-import { RichTextEditor } from "@/components/RichTextEditor";
+import { RichTextEditor, RichTextContent } from "@/components/RichTextEditor";
 
 interface Resource {
   id: string;
@@ -66,6 +67,8 @@ export default function AdminResources() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [selectedBatchFilter, setSelectedBatchFilter] = useState<string>("all");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -622,10 +625,14 @@ export default function AdminResources() {
                           </AccordionTrigger>
                           <AccordionContent>
                             <div className="space-y-2 pt-2">
-                              {moduleResources.map((resource) => (
+                                 {moduleResources.map((resource) => (
                                 <div
                                   key={resource.id}
-                                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50 cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedResource(resource);
+                                    setViewDialogOpen(true);
+                                  }}
                                 >
                                   <div className="flex items-center gap-3">
                                     {getResourceIcon(resource.resource_type)}
@@ -638,7 +645,10 @@ export default function AdminResources() {
                                       )}
                                     </div>
                                   </div>
-                                  {getResourceTypeBadge(resource.resource_type)}
+                                  <div className="flex items-center gap-2">
+                                    {getResourceTypeBadge(resource.resource_type)}
+                                    <Play className="h-4 w-4 text-muted-foreground" />
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -652,6 +662,82 @@ export default function AdminResources() {
           </div>
         )}
       </div>
+      {/* Resource View Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedResource && getResourceIcon(selectedResource.resource_type)}
+              {selectedResource?.title}
+            </DialogTitle>
+            {selectedResource?.description && (
+              <DialogDescription>{selectedResource.description}</DialogDescription>
+            )}
+          </DialogHeader>
+
+          {selectedResource?.resource_type === "video" && selectedResource.content_url && (
+            <div className="space-y-4">
+              <div className="aspect-video w-full">
+                <iframe
+                  src={(() => {
+                    const url = selectedResource.content_url!;
+                    if (url.includes("youtube.com/watch")) {
+                      const videoId = new URL(url).searchParams.get("v");
+                      return `https://www.youtube.com/embed/${videoId}`;
+                    }
+                    if (url.includes("youtu.be/")) {
+                      const videoId = url.split("youtu.be/")[1]?.split("?")[0];
+                      return `https://www.youtube.com/embed/${videoId}`;
+                    }
+                    return url;
+                  })()}
+                  className="h-full w-full rounded-lg"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => window.open(selectedResource.content_url!, "_blank")}>
+                  <ExternalLink className="mr-2 h-4 w-4" /> Open in New Tab
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {selectedResource?.resource_type === "text" && selectedResource.content_text && (
+            <ScrollArea className="max-h-[60vh]">
+              <div className="rounded-lg border bg-card p-6">
+                <RichTextContent content={selectedResource.content_text} />
+              </div>
+            </ScrollArea>
+          )}
+
+          {selectedResource?.resource_type === "notes" && selectedResource.pdf_url && (
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <File className="h-16 w-16 text-success" />
+              <p className="text-muted-foreground text-center">Click to download this PDF document.</p>
+              <Button onClick={async () => {
+                try {
+                  const { data, error } = await supabase.storage.from("resource-files").download(selectedResource.pdf_url!);
+                  if (error) throw error;
+                  const url = URL.createObjectURL(data);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `${selectedResource.title}.pdf`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } catch {
+                  toast({ title: "Error", description: "Failed to download PDF.", variant: "destructive" });
+                }
+              }}>
+                <Download className="mr-2 h-4 w-4" /> Download PDF
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
