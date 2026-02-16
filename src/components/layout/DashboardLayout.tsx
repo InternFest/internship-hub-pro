@@ -31,6 +31,7 @@ import {
   Shield,
   UserCog,
   Library,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ const studentNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Profile", href: "/profile", icon: User },
   { title: "Resources", href: "/resources", icon: Library },
+  { title: "Assignments", href: "/assignments", icon: ClipboardList },
   { title: "Internship Diary", href: "/diary", icon: BookOpen },
   { title: "Projects", href: "/projects", icon: FolderKanban },
   { title: "Leave Requests", href: "/leaves", icon: CalendarOff },
@@ -55,6 +57,7 @@ const studentNavItems: NavItem[] = [
 const facultyNavItems: NavItem[] = [
   { title: "Students", href: "/students", icon: Users },
   { title: "Resources", href: "/manage-resources", icon: Library },
+  { title: "Assignments", href: "/manage-assignments", icon: ClipboardList },
   { title: "Internship Diaries", href: "/view-diaries", icon: BookOpen },
   { title: "Projects", href: "/view-projects", icon: FolderKanban },
   { title: "Student Leaves", href: "/view-leaves", icon: CalendarOff },
@@ -67,6 +70,7 @@ const adminNavItems: NavItem[] = [
   { title: "Students", href: "/students", icon: Users },
   { title: "Projects", href: "/view-projects", icon: FolderKanban },
   { title: "Resources", href: "/manage-resources", icon: Library },
+  { title: "Assignments", href: "/manage-assignments", icon: ClipboardList },
   { title: "Faculty", href: "/faculty", icon: UserCog },
   { title: "Batches", href: "/batches", icon: GraduationCap },
   { title: "Diaries", href: "/view-diaries", icon: BookOpen },
