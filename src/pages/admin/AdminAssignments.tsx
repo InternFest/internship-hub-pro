@@ -202,18 +202,45 @@ export default function AdminAssignments() {
     setTrackingDialogOpen(true);
 
     try {
+      // Fetch submissions for this assignment
       const { data: subs } = await supabase
         .from("assignment_submissions")
         .select("*")
         .eq("assignment_id", assignment.id);
       setSubmissions(subs || []);
 
-      const { data: students } = await supabase
+      // ✅ FIX: Fetch student_profiles and then separately fetch profiles by user_id
+      const { data: studentProfiles } = await supabase
         .from("student_profiles")
-        .select("user_id, student_id, profiles:user_id(full_name, email)")
+        .select("user_id, student_id")
         .eq("batch_id", assignment.batch_id)
         .eq("status", "approved");
-      setBatchStudents((students as any) || []);
+
+      if (!studentProfiles || studentProfiles.length === 0) {
+        setBatchStudents([]);
+        return;
+      }
+
+      // Fetch profile info (full_name, email) for each student using their user_id
+      const userIds = studentProfiles.map((s) => s.user_id);
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      // Merge student_profiles with profiles data
+      const merged: StudentInfo[] = studentProfiles.map((sp) => {
+        const profile = profilesData?.find((p) => p.id === sp.user_id);
+        return {
+          user_id: sp.user_id,
+          student_id: sp.student_id,
+          profiles: profile
+            ? { full_name: profile.full_name, email: profile.email }
+            : undefined,
+        };
+      });
+
+      setBatchStudents(merged);
     } catch (error) {
       console.error("Error fetching tracking data:", error);
     }
@@ -412,7 +439,7 @@ export default function AdminAssignments() {
                           <div className="flex items-center gap-2">
                             <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
                             <div>
-                              <p className="font-medium text-sm">{(student.profiles as any)?.full_name}</p>
+                              <p className="font-medium text-sm">{student.profiles?.full_name}</p>
                               <p className="text-xs text-muted-foreground">{student.student_id}</p>
                             </div>
                           </div>
@@ -440,7 +467,7 @@ export default function AdminAssignments() {
                       <div key={student.user_id} className="flex items-center gap-2 rounded-lg border p-3">
                         <XCircle className="h-4 w-4 text-destructive flex-shrink-0" />
                         <div>
-                          <p className="font-medium text-sm">{(student.profiles as any)?.full_name}</p>
+                          <p className="font-medium text-sm">{student.profiles?.full_name}</p>
                           <p className="text-xs text-muted-foreground">{student.student_id}</p>
                         </div>
                       </div>
