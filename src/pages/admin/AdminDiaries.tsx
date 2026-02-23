@@ -35,6 +35,7 @@ import { format, parseISO } from "date-fns";
 interface DiaryEntry {
   id: string;
   week_number: number;
+  batch_id: string | null;
   entry_date: string;
   work_description: string;
   hours_worked: number;
@@ -57,6 +58,7 @@ interface Student {
   user_id: string;
   student_id: string | null;
   internship_role: string | null;
+  batch_id: string | null;
   profile: {
     full_name: string;
     email: string;
@@ -95,7 +97,7 @@ export default function AdminDiaries() {
         // Fetch all approved students
         const { data: studentsData } = await supabase
           .from("student_profiles")
-          .select("user_id, student_id, internship_role")
+          .select("user_id, student_id, internship_role, batch_id")
           .eq("status", "approved");
 
         // Fetch profiles for students
@@ -124,7 +126,7 @@ export default function AdminDiaries() {
         const userIds = [...new Set(diaryData?.map(d => d.user_id) || [])];
         const [profilesRes, studentProfilesRes] = await Promise.all([
           supabase.from("profiles").select("id, full_name, email").in("id", userIds),
-          supabase.from("student_profiles").select("user_id, internship_role, student_id").in("user_id", userIds),
+          supabase.from("student_profiles").select("user_id, internship_role, student_id,batch_id").in("user_id", userIds),
         ]);
 
         // Merge data
@@ -151,37 +153,76 @@ export default function AdminDiaries() {
   useEffect(() => {
     let result = entries;
 
+    // 1️⃣ Filter by batch
     if (batchFilter !== "all") {
       result = result.filter(
-        (e) => e.student_profile?.internship_role === batchFilter
+        (e) => e.student_profile?.batch_id === batchFilter
       );
     }
 
+    // 2️⃣ Filter by date
     if (dateFilter) {
-      result = result.filter((e) => e.entry_date === dateFilter);
+      result = result.filter(
+        (e) => e.entry_date === dateFilter
+      );
     }
 
     setFilteredEntries(result);
   }, [batchFilter, dateFilter, entries]);
+  // added
+  const getBatchName = (batchId: string | null) => {
+    if (!batchId) return "N/A";
+    const batch = batches.find(b => b.id === batchId);
+    return batch?.name || "N/A";
+  };
 
   // Get students who submitted on selected date
   const submittedUserIds = new Set(
-    filteredEntries.map(e => e.user_id)
+    entries
+      .filter(entry => {
+        const batchMatch =
+          batchFilter === "all" ||
+          entry.student_profile?.batch_id === batchFilter;
+
+        const dateMatch =
+          !dateFilter || entry.entry_date === dateFilter;
+
+        return batchMatch && dateMatch;
+      })
+      .map(entry => entry.user_id)
   );
 
   // Filter students by batch
-  const filteredStudents = batchFilter === "all" 
-    ? allStudents 
-    : allStudents.filter(s => s.internship_role === batchFilter);
+  const filteredStudents = batchFilter === "all"
+    ? allStudents
+    : allStudents.filter(s => s.batch_id === batchFilter);
 
   // Get students who have NOT submitted on selected date
-  const unsubmittedStudents = filteredStudents.filter(
-    s => !submittedUserIds.has(s.user_id)
-  );
+  const unsubmittedStudents = filteredStudents.filter(student => {
+    const hasSubmitted = entries.some(entry => {
+      return (
+        entry.user_id === student.user_id &&
+        (!dateFilter || entry.entry_date === dateFilter)
+      );
+    });
 
+    return !hasSubmitted;
+  });
+
+  const submittedEntries = entries.filter(entry => {
+    const batchMatch =
+      batchFilter === "all" ||
+      entry.student_profile?.batch_id === batchFilter;
+
+    const dateMatch =
+      !dateFilter || entry.entry_date === dateFilter;
+
+    return batchMatch && dateMatch;
+  });
   // Group entries by student
-  const entriesByStudent = filteredEntries.reduce((acc, entry) => {
+  const entriesByStudent = submittedEntries.reduce((acc, entry) => {
     const key = entry.user_id;
+
     if (!acc[key]) {
       acc[key] = {
         profile: entry.profile,
@@ -189,9 +230,17 @@ export default function AdminDiaries() {
         entries: [],
       };
     }
+
     acc[key].entries.push(entry);
     return acc;
-  }, {} as Record<string, { profile: DiaryEntry["profile"]; studentProfile: DiaryEntry["student_profile"]; entries: DiaryEntry[] }>);
+  }, {} as Record<
+    string,
+    {
+      profile: DiaryEntry["profile"];
+      studentProfile: DiaryEntry["student_profile"];
+      entries: DiaryEntry[];
+    }
+  >);
 
   if (role !== "admin" && role !== "faculty") {
     return (
@@ -279,7 +328,7 @@ export default function AdminDiaries() {
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
                     {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.name}>
+                      <SelectItem key={batch.id} value={batch.id}>
                         {batch.name}
                       </SelectItem>
                     ))}
@@ -446,7 +495,7 @@ export default function AdminDiaries() {
                             <TableCell>{student.profile?.email || "-"}</TableCell>
                             <TableCell>
                               <Badge variant="secondary">
-                                {student.internship_role || "N/A"}
+                                {getBatchName(student.batch_id)}
                               </Badge>
                             </TableCell>
                           </TableRow>
