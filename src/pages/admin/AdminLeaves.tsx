@@ -8,23 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, CalendarOff, Filter, Check, X, Loader2, Users, GraduationCap } from "lucide-react";
+import { Shield, CalendarOff, Filter, Check, X, Loader2, Users, GraduationCap, Eye } from "lucide-react";
 import { format, parseISO, isToday } from "date-fns";
 
 interface Batch {
@@ -63,7 +57,9 @@ export default function AdminLeaves() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [facultyBatchIds, setFacultyBatchIds] = useState<string[]>([]);
-  
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
+
   // Filters
   const [dateFilter, setDateFilter] = useState("all");
   const [customDate, setCustomDate] = useState("");
@@ -72,17 +68,10 @@ export default function AdminLeaves() {
 
   const fetchBatches = async () => {
     const today = new Date().toISOString().split('T')[0];
-    const { data } = await supabase
-      .from("batches")
-      .select("id, name, end_date, assigned_faculty_id")
-      .gt("end_date", today)
-      .order("name");
-    
-    // For faculty, filter batches to only those assigned to them
+    const { data } = await supabase.from("batches").select("id, name, end_date, assigned_faculty_id").gt("end_date", today).order("name");
     if (role === "faculty" && user) {
       const assignedBatches = (data || []).filter(b => b.assigned_faculty_id === user.id);
-      const assignedBatchIds = assignedBatches.map(b => b.id);
-      setFacultyBatchIds(assignedBatchIds);
+      setFacultyBatchIds(assignedBatches.map(b => b.id));
       setBatches(assignedBatches);
     } else {
       setBatches(data || []);
@@ -91,30 +80,17 @@ export default function AdminLeaves() {
 
   const fetchRequests = async () => {
     try {
-      // First get faculty batch IDs if faculty role
       let assignedBatchIds: string[] = [];
       if (role === "faculty" && user) {
         const today = new Date().toISOString().split('T')[0];
-        const { data: batchesData } = await supabase
-          .from("batches")
-          .select("id, assigned_faculty_id")
-          .gt("end_date", today);
-        
-        assignedBatchIds = (batchesData || [])
-          .filter(b => b.assigned_faculty_id === user.id)
-          .map(b => b.id);
+        const { data: batchesData } = await supabase.from("batches").select("id, assigned_faculty_id").gt("end_date", today);
+        assignedBatchIds = (batchesData || []).filter(b => b.assigned_faculty_id === user.id).map(b => b.id);
         setFacultyBatchIds(assignedBatchIds);
       }
 
-      // Fetch leave requests
-      const { data: requestsData, error } = await supabase
-        .from("leave_requests")
-        .select("*")
-        .order("created_at", { ascending: false });
-
+      const { data: requestsData, error } = await supabase.from("leave_requests").select("*").order("created_at", { ascending: false });
       if (error) throw error;
 
-      // Fetch profiles and student profiles
       const userIds = requestsData?.map(r => r.user_id) || [];
       const [profilesRes, studentProfilesRes, userRolesRes] = await Promise.all([
         supabase.from("profiles").select("id, full_name, email, phone").in("id", userIds),
@@ -122,7 +98,6 @@ export default function AdminLeaves() {
         supabase.from("user_roles").select("user_id, role").in("user_id", userIds),
       ]);
 
-      // Merge data
       let requestsWithProfiles = (requestsData || []).map(request => {
         const userRole = userRolesRes.data?.find(r => r.user_id === request.user_id);
         return {
@@ -133,14 +108,12 @@ export default function AdminLeaves() {
         };
       });
 
-      // For faculty, filter to only show student leave requests from their assigned batches
       if (role === "faculty" && assignedBatchIds.length > 0) {
         requestsWithProfiles = requestsWithProfiles.filter(r => {
-          // Only show student requests from faculty's batches
           if (r.user_role === "student") {
             return r.student_profile?.batch_id && assignedBatchIds.includes(r.student_profile.batch_id);
           }
-          return false; // Faculty shouldn't see other faculty leave requests
+          return false;
         });
       } else if (role === "faculty" && assignedBatchIds.length === 0) {
         requestsWithProfiles = [];
@@ -164,54 +137,27 @@ export default function AdminLeaves() {
 
   useEffect(() => {
     let result = requests;
-
-    // User type filter
-    if (userTypeFilter !== "all") {
-      result = result.filter((r) => r.user_role === userTypeFilter);
-    }
-
-    // Date filter
-    if (dateFilter === "today") {
-      result = result.filter((r) => isToday(parseISO(r.leave_date)));
-    } else if (dateFilter === "custom" && customDate) {
-      result = result.filter((r) => r.leave_date === customDate);
-    }
-
-    // Batch filter (only for students) - using batch_id now
-    if (batchFilter !== "all") {
-      result = result.filter((r) => r.student_profile?.batch_id === batchFilter);
-    }
-
+    if (userTypeFilter !== "all") result = result.filter((r) => r.user_role === userTypeFilter);
+    if (dateFilter === "today") result = result.filter((r) => isToday(parseISO(r.leave_date)));
+    else if (dateFilter === "custom" && customDate) result = result.filter((r) => r.leave_date === customDate);
+    if (batchFilter !== "all") result = result.filter((r) => r.student_profile?.batch_id === batchFilter);
     setFilteredRequests(result);
   }, [dateFilter, customDate, batchFilter, userTypeFilter, requests]);
 
   const handleAction = async (requestId: string, approved: boolean) => {
     setProcessingId(requestId);
     try {
-      const { error } = await supabase
-        .from("leave_requests")
-        .update({
-          status: approved ? "approved" : "rejected",
-          reviewed_by: user?.id,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq("id", requestId);
-
+      const { error } = await supabase.from("leave_requests").update({
+        status: approved ? "approved" : "rejected",
+        reviewed_by: user?.id,
+        reviewed_at: new Date().toISOString(),
+      }).eq("id", requestId);
       if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: `Leave request ${approved ? "approved" : "rejected"} successfully.`,
-      });
-
+      toast({ title: "Success", description: `Leave request ${approved ? "approved" : "rejected"} successfully.` });
       fetchRequests();
     } catch (error) {
       console.error("Error updating leave request:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update leave request.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update leave request.", variant: "destructive" });
     } finally {
       setProcessingId(null);
     }
@@ -219,38 +165,20 @@ export default function AdminLeaves() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "approved":
-        return <Badge className="bg-success/10 text-success">Approved</Badge>;
-      case "rejected":
-        return <Badge className="bg-destructive/10 text-destructive">Rejected</Badge>;
-      default:
-        return <Badge className="bg-warning/10 text-warning">Pending</Badge>;
+      case "approved": return <Badge className="bg-success/10 text-success">Approved</Badge>;
+      case "rejected": return <Badge className="bg-destructive/10 text-destructive">Rejected</Badge>;
+      default: return <Badge className="bg-warning/10 text-warning">Pending</Badge>;
     }
   };
 
   const getUserTypeBadge = (userRole: string) => {
-    if (userRole === "faculty") {
-      return (
-        <Badge className="bg-accent/10 text-accent">
-          <Users className="mr-1 h-3 w-3" />
-          Faculty
-        </Badge>
-      );
-    }
-    return (
-      <Badge className="bg-primary/10 text-primary">
-        <GraduationCap className="mr-1 h-3 w-3" />
-        Student
-      </Badge>
-    );
+    if (userRole === "faculty") return <Badge className="bg-accent/10 text-accent"><Users className="mr-1 h-3 w-3" />Faculty</Badge>;
+    return <Badge className="bg-primary/10 text-primary"><GraduationCap className="mr-1 h-3 w-3" />Student</Badge>;
   };
 
-  // Stats
   const studentRequests = requests.filter(r => r.user_role === "student");
   const facultyRequests = requests.filter(r => r.user_role === "faculty");
   const pendingRequests = requests.filter(r => r.status === "pending");
-
-  // Only admin can approve/reject, but faculty can view
   const canManage = role === "admin";
 
   if (role !== "admin" && role !== "faculty") {
@@ -259,21 +187,13 @@ export default function AdminLeaves() {
         <div className="flex flex-col items-center justify-center py-12 fade-in">
           <Shield className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="text-lg font-semibold">Access Denied</h3>
-          <p className="text-muted-foreground">
-            Only administrators and faculty can access this page.
-          </p>
+          <p className="text-muted-foreground">Only administrators and faculty can access this page.</p>
         </div>
       </DashboardLayout>
     );
   }
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <SkeletonTable />
-      </DashboardLayout>
-    );
-  }
+  if (loading) return <DashboardLayout><SkeletonTable /></DashboardLayout>;
 
   return (
     <DashboardLayout>
@@ -287,46 +207,26 @@ export default function AdminLeaves() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 fade-in">
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <CalendarOff className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{requests.length}</p>
-                <p className="text-sm text-muted-foreground">Total Requests</p>
-              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10"><CalendarOff className="h-6 w-6 text-primary" /></div>
+              <div><p className="text-2xl font-bold">{requests.length}</p><p className="text-sm text-muted-foreground">Total Requests</p></div>
             </CardContent>
           </Card>
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
-                <CalendarOff className="h-6 w-6 text-warning" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{pendingRequests.length}</p>
-                <p className="text-sm text-muted-foreground">Pending</p>
-              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10"><CalendarOff className="h-6 w-6 text-warning" /></div>
+              <div><p className="text-2xl font-bold">{pendingRequests.length}</p><p className="text-sm text-muted-foreground">Pending</p></div>
             </CardContent>
           </Card>
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                <GraduationCap className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{studentRequests.length}</p>
-                <p className="text-sm text-muted-foreground">Student Requests</p>
-              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10"><GraduationCap className="h-6 w-6 text-primary" /></div>
+              <div><p className="text-2xl font-bold">{studentRequests.length}</p><p className="text-sm text-muted-foreground">Student Requests</p></div>
             </CardContent>
           </Card>
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-                <Users className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{facultyRequests.length}</p>
-                <p className="text-sm text-muted-foreground">Faculty Requests</p>
-              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10"><Users className="h-6 w-6 text-accent" /></div>
+              <div><p className="text-2xl font-bold">{facultyRequests.length}</p><p className="text-sm text-muted-foreground">Faculty Requests</p></div>
             </CardContent>
           </Card>
         </div>
@@ -334,19 +234,14 @@ export default function AdminLeaves() {
         {/* Filters */}
         <Card className="slide-up">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Filter className="h-4 w-4" />
-              Filters
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><Filter className="h-4 w-4" /> Filters</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label>User Type</Label>
                 <Select value={userTypeFilter} onValueChange={setUserTypeFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Users</SelectItem>
                     <SelectItem value="student">Students Only</SelectItem>
@@ -354,13 +249,10 @@ export default function AdminLeaves() {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label>Applied Date</Label>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Dates</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
@@ -368,31 +260,19 @@ export default function AdminLeaves() {
                   </SelectContent>
                 </Select>
               </div>
-
               {dateFilter === "custom" && (
                 <div className="space-y-2">
                   <Label>Select Date</Label>
-                  <Input
-                    type="date"
-                    value={customDate}
-                    onChange={(e) => setCustomDate(e.target.value)}
-                  />
+                  <Input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)} />
                 </div>
               )}
-
               <div className="space-y-2">
                 <Label>Batch (Students)</Label>
                 <Select value={batchFilter} onValueChange={setBatchFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
-                    {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.id}>
-                        {batch.name}
-                      </SelectItem>
-                    ))}
+                    {batches.map((batch) => (<SelectItem key={batch.id} value={batch.id}>{batch.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -403,22 +283,15 @@ export default function AdminLeaves() {
         {/* Results */}
         <Card className="slide-up">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CalendarOff className="h-5 w-5" />
-              Leave Requests
-            </CardTitle>
-            <CardDescription>
-              {filteredRequests.length} request(s) found
-            </CardDescription>
+            <CardTitle className="flex items-center gap-2"><CalendarOff className="h-5 w-5" /> Leave Requests</CardTitle>
+            <CardDescription>{filteredRequests.length} request(s) found</CardDescription>
           </CardHeader>
           <CardContent>
             {filteredRequests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 fade-in">
                 <CalendarOff className="mb-4 h-12 w-12 text-muted-foreground" />
                 <h3 className="text-lg font-semibold">No leave requests</h3>
-                <p className="text-muted-foreground">
-                  No leave requests match your current filters.
-                </p>
+                <p className="text-muted-foreground">No leave requests match your current filters.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -427,7 +300,6 @@ export default function AdminLeaves() {
                     <TableRow>
                       <TableHead>User</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Contact</TableHead>
                       <TableHead>Leave Date</TableHead>
                       <TableHead>Leave Type</TableHead>
                       <TableHead>Reason</TableHead>
@@ -441,60 +313,33 @@ export default function AdminLeaves() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{request.profile?.full_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {request.profile?.email}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{request.profile?.email}</p>
                           </div>
                         </TableCell>
                         <TableCell>{getUserTypeBadge(request.user_role)}</TableCell>
-                        <TableCell>{request.profile?.phone || "-"}</TableCell>
-                        <TableCell>
-                          {format(parseISO(request.leave_date), "MMM d, yyyy")}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {request.leave_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <p className="max-w-[200px] truncate">{request.reason}</p>
-                        </TableCell>
+                        <TableCell>{format(parseISO(request.leave_date), "MMM d, yyyy")}</TableCell>
+                        <TableCell><Badge variant="outline" className="capitalize">{request.leave_type}</Badge></TableCell>
+                        <TableCell><p className="max-w-[200px] truncate">{request.reason}</p></TableCell>
                         <TableCell>{getStatusBadge(request.status)}</TableCell>
                         <TableCell className="text-right">
-                          {request.status === "pending" && canManage ? (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-destructive hover:bg-destructive/10 transition-smooth"
-                                onClick={() => handleAction(request.id, false)}
-                                disabled={processingId === request.id}
-                              >
-                                {processingId === request.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <X className="h-4 w-4" />
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleAction(request.id, true)}
-                                disabled={processingId === request.id}
-                                className="transition-smooth"
-                              >
-                                {processingId === request.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Check className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              {request.status === "pending" ? "View only" : "—"}
-                            </span>
-                          )}
+                          <div className="flex justify-end gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => { setSelectedRequest(request); setViewDialogOpen(true); }}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {request.status === "pending" && canManage && (
+                              <>
+                                <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10" onClick={() => handleAction(request.id, false)} disabled={processingId === request.id}>
+                                  {processingId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+                                </Button>
+                                <Button size="sm" variant="default" onClick={() => handleAction(request.id, true)} disabled={processingId === request.id}>
+                                  {processingId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                </Button>
+                              </>
+                            )}
+                            {(request.status !== "pending" || !canManage) && !canManage && (
+                              <span className="text-sm text-muted-foreground">View only</span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -505,6 +350,70 @@ export default function AdminLeaves() {
           </CardContent>
         </Card>
       </div>
+
+      {/* View Leave Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-lg">
+          {selectedRequest && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <CalendarOff className="h-5 w-5" />
+                  Leave Request Details
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedRequest.profile?.full_name} • {format(parseISO(selectedRequest.created_at), "MMM d, yyyy HH:mm")}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-muted-foreground">Leave Date</p>
+                    <p className="font-medium">{format(parseISO(selectedRequest.leave_date), "EEEE, MMM d, yyyy")}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-muted-foreground">Leave Type</p>
+                    <Badge variant="outline" className="capitalize">{selectedRequest.leave_type}</Badge>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-muted-foreground">User Type</p>
+                    {getUserTypeBadge(selectedRequest.user_role)}
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-muted-foreground">Status</p>
+                    {getStatusBadge(selectedRequest.status)}
+                  </div>
+                </div>
+                {selectedRequest.title && (
+                  <div className="rounded-lg border p-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Title</p>
+                    <p className="font-medium">{selectedRequest.title}</p>
+                  </div>
+                )}
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Reason</p>
+                  <p className="whitespace-pre-wrap">{selectedRequest.reason}</p>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">Contact</p>
+                  <p className="text-sm">{selectedRequest.profile?.email}</p>
+                  {selectedRequest.profile?.phone && <p className="text-sm text-muted-foreground">{selectedRequest.profile.phone}</p>}
+                </div>
+                {selectedRequest.status === "pending" && canManage && (
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button variant="outline" className="text-destructive" onClick={() => { handleAction(selectedRequest.id, false); setViewDialogOpen(false); }}>
+                      <X className="mr-2 h-4 w-4" /> Reject
+                    </Button>
+                    <Button onClick={() => { handleAction(selectedRequest.id, true); setViewDialogOpen(false); }}>
+                      <Check className="mr-2 h-4 w-4" /> Approve
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

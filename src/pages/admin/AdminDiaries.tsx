@@ -51,6 +51,7 @@ interface DiaryEntry {
   student_profile: {
     internship_role: string | null;
     student_id: string | null;
+    batch_id: string | null;
   } | null;
 }
 

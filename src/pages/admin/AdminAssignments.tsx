@@ -6,33 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, ClipboardList, Lock, Upload, Users, CheckCircle, XCircle, FileText, ExternalLink } from "lucide-react";
+import { Loader2, Plus, ClipboardList, Lock, Users, CheckCircle, XCircle, FileText, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 
 interface Assignment {
@@ -84,6 +73,11 @@ export default function AdminAssignments() {
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [batchStudents, setBatchStudents] = useState<StudentInfo[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingAssignment, setDeletingAssignment] = useState<Assignment | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [batchId, setBatchId] = useState("");
@@ -99,10 +93,7 @@ export default function AdminAssignments() {
     try {
       const today = new Date().toISOString().split("T")[0];
       const { data: batchesData } = await supabase
-        .from("batches")
-        .select("id, name, end_date, assigned_faculty_id")
-        .gt("end_date", today)
-        .order("name");
+        .from("batches").select("id, name, end_date, assigned_faculty_id").gt("end_date", today).order("name");
 
       let availableBatches = batchesData || [];
       if (role === "faculty" && user) {
@@ -112,10 +103,7 @@ export default function AdminAssignments() {
 
       const facultyBatchIds = role === "faculty" && user ? availableBatches.map((b) => b.id) : null;
 
-      let query = supabase
-        .from("assignments")
-        .select("*, batches(name)")
-        .order("assignment_number", { ascending: true });
+      let query = supabase.from("assignments").select("*, batches(name)").order("assignment_number", { ascending: true });
 
       if (facultyBatchIds && facultyBatchIds.length > 0) {
         query = query.in("batch_id", facultyBatchIds);
@@ -140,14 +128,23 @@ export default function AdminAssignments() {
   }, [authLoading]);
 
   const resetForm = () => {
-    setBatchId("");
-    setAssignmentNumber("1");
-    setTitle("");
-    setDescription("");
-    setLinks("");
-    setStartDate(new Date().toISOString().split("T")[0]);
-    setDeadline("");
+    setBatchId(""); setAssignmentNumber("1"); setTitle(""); setDescription("");
+    setLinks(""); setStartDate(new Date().toISOString().split("T")[0]); setDeadline("");
+    setPdfFile(null); setEditMode(false); setEditingAssignment(null);
+  };
+
+  const populateFormForEdit = (assignment: Assignment) => {
+    setEditMode(true);
+    setEditingAssignment(assignment);
+    setBatchId(assignment.batch_id);
+    setAssignmentNumber(assignment.assignment_number.toString());
+    setTitle(assignment.title);
+    setDescription(assignment.description || "");
+    setLinks(assignment.links || "");
+    setStartDate(assignment.start_date);
+    setDeadline(assignment.deadline);
     setPdfFile(null);
+    setDialogOpen(true);
   };
 
   const handleSubmit = async () => {
@@ -158,22 +155,19 @@ export default function AdminAssignments() {
 
     setSaving(true);
     try {
-      let pdfUrl = null;
+      let pdfUrl = editingAssignment?.pdf_url || null;
       if (pdfFile) {
         setUploading(true);
         const fileExt = pdfFile.name.split(".").pop();
         const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from("assignment-files")
-          .upload(filePath, pdfFile);
+        const { error: uploadError } = await supabase.storage.from("assignment-files").upload(filePath, pdfFile);
         if (uploadError) throw uploadError;
         pdfUrl = filePath;
         setUploading(false);
       }
 
-      const { error } = await supabase.from("assignments").insert({
+      const payload = {
         batch_id: batchId,
-        created_by: user.id,
         assignment_number: parseInt(assignmentNumber),
         title,
         description: description || null,
@@ -181,65 +175,74 @@ export default function AdminAssignments() {
         links: links || null,
         start_date: startDate,
         deadline,
-      });
+      };
 
-      if (error) throw error;
-      toast({ title: "Success", description: "Assignment created." });
+      if (editMode && editingAssignment) {
+        const { error } = await supabase.from("assignments").update(payload).eq("id", editingAssignment.id);
+        if (error) throw error;
+        toast({ title: "Success", description: "Assignment updated." });
+      } else {
+        const { error } = await supabase.from("assignments").insert({ ...payload, created_by: user.id });
+        if (error) throw error;
+        toast({ title: "Success", description: "Assignment created." });
+      }
+
       setDialogOpen(false);
       resetForm();
       fetchData();
     } catch (error) {
       console.error("Error:", error);
-      toast({ title: "Error", description: "Failed to create assignment.", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to save assignment.", variant: "destructive" });
     } finally {
       setSaving(false);
       setUploading(false);
     }
   };
 
+  const handleDelete = async () => {
+    if (!deletingAssignment) return;
+    setDeleting(true);
+    try {
+      if (deletingAssignment.pdf_url) {
+        await supabase.storage.from("assignment-files").remove([deletingAssignment.pdf_url]);
+      }
+      const { error } = await supabase.from("assignments").delete().eq("id", deletingAssignment.id);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Assignment deleted successfully." });
+      setDeleteDialogOpen(false);
+      setDeletingAssignment(null);
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting:", error);
+      toast({ title: "Error", description: "Failed to delete assignment.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleViewTracking = async (assignment: Assignment) => {
     setSelectedAssignment(assignment);
     setTrackingDialogOpen(true);
-
     try {
-      // Fetch submissions for this assignment
-      const { data: subs } = await supabase
-        .from("assignment_submissions")
-        .select("*")
-        .eq("assignment_id", assignment.id);
+      const { data: subs } = await supabase.from("assignment_submissions").select("*").eq("assignment_id", assignment.id);
       setSubmissions(subs || []);
 
-      // ✅ FIX: Fetch student_profiles and then separately fetch profiles by user_id
       const { data: studentProfiles } = await supabase
-        .from("student_profiles")
-        .select("user_id, student_id")
-        .eq("batch_id", assignment.batch_id)
-        .eq("status", "approved");
+        .from("student_profiles").select("user_id, student_id").eq("batch_id", assignment.batch_id).eq("status", "approved");
 
-      if (!studentProfiles || studentProfiles.length === 0) {
-        setBatchStudents([]);
-        return;
-      }
+      if (!studentProfiles || studentProfiles.length === 0) { setBatchStudents([]); return; }
 
-      // Fetch profile info (full_name, email) for each student using their user_id
       const userIds = studentProfiles.map((s) => s.user_id);
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", userIds);
+      const { data: profilesData } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
 
-      // Merge student_profiles with profiles data
       const merged: StudentInfo[] = studentProfiles.map((sp) => {
         const profile = profilesData?.find((p) => p.id === sp.user_id);
         return {
           user_id: sp.user_id,
           student_id: sp.student_id,
-          profiles: profile
-            ? { full_name: profile.full_name, email: profile.email }
-            : undefined,
+          profiles: profile ? { full_name: profile.full_name, email: profile.email } : undefined,
         };
       });
-
       setBatchStudents(merged);
     } catch (error) {
       console.error("Error fetching tracking data:", error);
@@ -248,9 +251,7 @@ export default function AdminAssignments() {
 
   const handleViewFile = async (fileUrl: string) => {
     try {
-      const { data, error } = await supabase.storage
-        .from("assignment-files")
-        .download(fileUrl);
+      const { data, error } = await supabase.storage.from("assignment-files").download(fileUrl);
       if (error) throw error;
       const url = URL.createObjectURL(data);
       window.open(url, "_blank");
@@ -259,13 +260,9 @@ export default function AdminAssignments() {
     }
   };
 
-  const filteredAssignments = selectedBatchFilter === "all"
-    ? assignments
-    : assignments.filter((a) => a.batch_id === selectedBatchFilter);
+  const filteredAssignments = selectedBatchFilter === "all" ? assignments : assignments.filter((a) => a.batch_id === selectedBatchFilter);
 
-  if (authLoading || loading) {
-    return <DashboardLayout><SkeletonTable /></DashboardLayout>;
-  }
+  if (authLoading || loading) return <DashboardLayout><SkeletonTable /></DashboardLayout>;
 
   if (role !== "admin" && role !== "faculty") {
     return (
@@ -296,8 +293,8 @@ export default function AdminAssignments() {
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create Assignment</DialogTitle>
-                <DialogDescription>Create a new assignment for a batch.</DialogDescription>
+                <DialogTitle>{editMode ? "Edit Assignment" : "Create Assignment"}</DialogTitle>
+                <DialogDescription>{editMode ? "Update assignment details." : "Create a new assignment for a batch."}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -305,11 +302,7 @@ export default function AdminAssignments() {
                     <Label>Batch *</Label>
                     <Select value={batchId} onValueChange={setBatchId}>
                       <SelectTrigger><SelectValue placeholder="Select batch" /></SelectTrigger>
-                      <SelectContent>
-                        {batches.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                        ))}
-                      </SelectContent>
+                      <SelectContent>{batches.map((b) => (<SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>))}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
@@ -340,14 +333,14 @@ export default function AdminAssignments() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>PDF Attachment</Label>
+                  <Label>PDF Attachment {editMode ? "(leave empty to keep current)" : ""}</Label>
                   <Input type="file" accept=".pdf" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} />
                   {pdfFile && <Badge variant="outline">{pdfFile.name}</Badge>}
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
                   <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                   <Button onClick={handleSubmit} disabled={saving || uploading}>
-                    {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : <><Plus className="mr-2 h-4 w-4" /> Create</>}
+                    {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : editMode ? <><Pencil className="mr-2 h-4 w-4" /> Update</> : <><Plus className="mr-2 h-4 w-4" /> Create</>}
                   </Button>
                 </div>
               </div>
@@ -394,9 +387,17 @@ export default function AdminAssignments() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => handleViewTracking(assignment)}>
-                    <Users className="mr-2 h-4 w-4" /> Track Submissions
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleViewTracking(assignment)}>
+                      <Users className="mr-2 h-4 w-4" /> Track
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => populateFormForEdit(assignment)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setDeletingAssignment(assignment); setDeleteDialogOpen(true); }}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -410,24 +411,16 @@ export default function AdminAssignments() {
           {selectedAssignment && (
             <>
               <DialogHeader>
-                <DialogTitle>
-                  Assignment #{selectedAssignment.assignment_number}: {selectedAssignment.title}
-                </DialogTitle>
+                <DialogTitle>Assignment #{selectedAssignment.assignment_number}: {selectedAssignment.title}</DialogTitle>
                 <DialogDescription>
                   {selectedAssignment.batches?.name} • Deadline: {format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}
                 </DialogDescription>
               </DialogHeader>
-
               <Tabs defaultValue="submitted">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="submitted">
-                    Submitted ({submittedStudents.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="not-submitted">
-                    Not Submitted ({notSubmittedStudents.length})
-                  </TabsTrigger>
+                  <TabsTrigger value="submitted">Submitted ({submittedStudents.length})</TabsTrigger>
+                  <TabsTrigger value="not-submitted">Not Submitted ({notSubmittedStudents.length})</TabsTrigger>
                 </TabsList>
-
                 <TabsContent value="submitted" className="space-y-2 mt-4">
                   {submittedStudents.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">No submissions yet.</p>
@@ -444,9 +437,7 @@ export default function AdminAssignments() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">
-                              {sub && format(new Date(sub.submitted_at), "MMM dd, HH:mm")}
-                            </span>
+                            <span className="text-xs text-muted-foreground">{sub && format(new Date(sub.submitted_at), "MMM dd, HH:mm")}</span>
                             {sub && (
                               <Button variant="outline" size="sm" onClick={() => handleViewFile(sub.file_url)}>
                                 <FileText className="mr-1 h-3 w-3" /> View
@@ -458,7 +449,6 @@ export default function AdminAssignments() {
                     })
                   )}
                 </TabsContent>
-
                 <TabsContent value="not-submitted" className="space-y-2 mt-4">
                   {notSubmittedStudents.length === 0 ? (
                     <p className="text-center text-muted-foreground py-8">All students submitted!</p>
@@ -479,6 +469,25 @@ export default function AdminAssignments() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{deletingAssignment?.title}"? This will also remove all student submissions.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
