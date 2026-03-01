@@ -251,6 +251,23 @@ export default function Dashboard() {
     return (
       <DashboardLayout>
         <div className="space-y-6">
+          {/* Important Notice */}
+          <Card className="border-primary/20 bg-primary/5 fade-in">
+            <CardContent className="flex items-start gap-4 p-5">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <AlertCircle className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-primary mb-1">📅 Important Reminder</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Kindly refer to the <a href="/calendar" className="font-medium text-primary underline underline-offset-2 hover:text-primary/80">Working Calendar</a> for Work Diary updation. 
+                  If a session is not covered on a particular day, it will be continued in the next day/session. 
+                  However, please ensure that <strong>Work Diary entries are updated without fail</strong>.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Welcome Section */}
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between fade-in">
             <div>

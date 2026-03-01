@@ -177,6 +177,44 @@ export type Database = {
         }
         Relationships: []
       }
+      calendars: {
+        Row: {
+          batch_id: string
+          created_at: string
+          id: string
+          pdf_url: string
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          id?: string
+          pdf_url: string
+          title?: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          id?: string
+          pdf_url?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendars_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internship_diary: {
         Row: {
           created_at: string

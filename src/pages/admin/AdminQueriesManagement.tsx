@@ -44,15 +44,6 @@ interface Batch {
   name: string;
 }
 
-interface QueryComment {
-  id: string;
-  query_id: string;
-  admin_id: string;
-  comment: string;
-  created_at: string;
-  admin_name?: string; // joined from profiles
-}
-
 interface AdminQuery {
   id: string;
   title: string;
@@ -91,12 +82,6 @@ export default function AdminQueriesManagement() {
   const [selectedQuery, setSelectedQuery] = useState<AdminQuery | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [batches, setBatches] = useState<Batch[]>([]);
-
-  // Comment state
-  const [comments, setComments] = useState<QueryComment[]>([]);
-  const [newComment, setNewComment] = useState("");
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [submittingComment, setSubmittingComment] = useState(false);
 
   // Filters
   const [dateFilter, setDateFilter] = useState("all");
@@ -148,83 +133,6 @@ export default function AdminQueriesManagement() {
     }
   };
 
-  /**
-   * Fetch comments for a specific query.
-   * Expects a `query_comments` table with columns:
-   *   id, query_id, admin_id, comment, created_at
-   * and joins admin name via profiles.
-   */
-  const fetchComments = async (queryId: string) => {
-    setLoadingComments(true);
-    try {
-      const { data, error } = await supabase
-        .from("query_comments")
-        .select("id, query_id, admin_id, comment, created_at")
-        .eq("query_id", queryId)
-        .order("created_at", { ascending: true });
-
-      if (error) throw error;
-
-      // Fetch admin names
-      const adminIds = [...new Set((data || []).map((c) => c.admin_id))];
-      let adminNames: Record<string, string> = {};
-      if (adminIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", adminIds);
-        (profiles || []).forEach((p) => {
-          adminNames[p.id] = p.full_name;
-        });
-      }
-
-      const enrichedComments = (data || []).map((c) => ({
-        ...c,
-        admin_name: adminNames[c.admin_id] || "Admin",
-      }));
-
-      setComments(enrichedComments);
-    } catch (error) {
-      console.error("Error fetching comments:", error);
-      // If table doesn't exist yet, just set empty
-      setComments([]);
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
-  const handleSubmitComment = async () => {
-    if (!newComment.trim() || !selectedQuery || !user) return;
-
-    setSubmittingComment(true);
-    try {
-      const { error } = await supabase.from("query_comments").insert({
-        query_id: selectedQuery.id,
-        admin_id: user.id,
-        comment: newComment.trim(),
-      });
-
-      if (error) throw error;
-
-      setNewComment("");
-      await fetchComments(selectedQuery.id);
-
-      toast({
-        title: "Comment added",
-        description: "Your note has been saved successfully.",
-      });
-    } catch (error) {
-      console.error("Error adding comment:", error);
-      toast({
-        title: "Error",
-        description: "Failed to add comment.",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmittingComment(false);
-    }
-  };
-
   useEffect(() => {
     if (role === "admin") {
       fetchQueries();
@@ -266,7 +174,6 @@ export default function AdminQueriesManagement() {
         description: `Query ${resolved ? "resolved" : "reopened"} successfully.`,
       });
 
-      // Update selectedQuery state if dialog is open
       if (selectedQuery?.id === queryId) {
         setSelectedQuery((prev) => prev ? { ...prev, is_resolved: resolved } : prev);
       }
@@ -287,8 +194,6 @@ export default function AdminQueriesManagement() {
   const openViewDialog = (query: AdminQuery) => {
     setSelectedQuery(query);
     setViewDialogOpen(true);
-    setNewComment("");
-    fetchComments(query.id);
   };
 
   if (role !== "admin") {
@@ -357,13 +262,11 @@ export default function AdminQueriesManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <div className="space-y-2">
                 <Label>Date</Label>
                 <Select value={dateFilter} onValueChange={setDateFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Dates</SelectItem>
                     <SelectItem value="today">Today</SelectItem>
@@ -371,47 +274,21 @@ export default function AdminQueriesManagement() {
                   </SelectContent>
                 </Select>
               </div>
-
               {dateFilter === "custom" && (
                 <div className="space-y-2">
                   <Label>Select Date</Label>
-                  <Input
-                    type="date"
-                    value={customDate}
-                    onChange={(e) => setCustomDate(e.target.value)}
-                  />
+                  <Input type="date" value={customDate} onChange={(e) => setCustomDate(e.target.value)} />
                 </div>
               )}
-
               <div className="space-y-2">
                 <Label>Batch</Label>
                 <Select value={batchFilter} onValueChange={setBatchFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Batches</SelectItem>
                     {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.id}>
-                        {batch.name}
-                      </SelectItem>
+                      <SelectItem key={batch.id} value={batch.id}>{batch.name}</SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Course</Label>
-                <Select value={courseFilter} onValueChange={setCourseFilter}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Courses</SelectItem>
-                    <SelectItem value="vlsi">VLSI</SelectItem>
-                    <SelectItem value="ai_ml">AI/ML</SelectItem>
-                    <SelectItem value="mern">MERN</SelectItem>
-                    <SelectItem value="java">Java</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -454,17 +331,13 @@ export default function AdminQueriesManagement() {
                         <TableCell>
                           <div>
                             <p className="font-medium">{query.profile?.full_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {query.student_profile?.student_id || "N/A"}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{query.student_profile?.student_id || "N/A"}</p>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div>
                             <p className="text-sm">{query.profile?.email}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {query.profile?.phone || "-"}
-                            </p>
+                            <p className="text-xs text-muted-foreground">{query.profile?.phone || "-"}</p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -474,56 +347,22 @@ export default function AdminQueriesManagement() {
                           <Badge variant="outline">{categoryLabels[query.category]}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            className={
-                              query.is_resolved
-                                ? "bg-success/10 text-success"
-                                : "bg-warning/10 text-warning"
-                            }
-                          >
+                          <Badge className={query.is_resolved ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
                             {query.is_resolved ? "Resolved" : "Open"}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => openViewDialog(query)}
-                            >
+                            <Button size="sm" variant="ghost" onClick={() => openViewDialog(query)}>
                               <Eye className="h-4 w-4" />
                             </Button>
                             {!query.is_resolved ? (
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => handleResolve(query.id, true)}
-                                disabled={processingId === query.id}
-                              >
-                                {processingId === query.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <Check className="mr-1 h-4 w-4" />
-                                    Resolve
-                                  </>
-                                )}
+                              <Button size="sm" variant="default" onClick={() => handleResolve(query.id, true)} disabled={processingId === query.id}>
+                                {processingId === query.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                               </Button>
                             ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleResolve(query.id, false)}
-                                disabled={processingId === query.id}
-                              >
-                                {processingId === query.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <>
-                                    <X className="mr-1 h-4 w-4" />
-                                    Reopen
-                                  </>
-                                )}
+                              <Button size="sm" variant="outline" onClick={() => handleResolve(query.id, false)} disabled={processingId === query.id}>
+                                {processingId === query.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                               </Button>
                             )}
                           </div>
@@ -538,179 +377,55 @@ export default function AdminQueriesManagement() {
         </Card>
       </div>
 
-      {/* View Dialog — now wider to accommodate comment section */}
+      {/* View Dialog */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-2xl scale-in">
-          <DialogHeader>
-            <DialogTitle>Query Details</DialogTitle>
-            <DialogDescription>
-              Submitted{" "}
-              {selectedQuery && format(parseISO(selectedQuery.created_at), "PPpp")}
-            </DialogDescription>
-          </DialogHeader>
-
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedQuery && (
-            <div className="space-y-5">
-              {/* Student Info */}
-              <div className="grid gap-2 rounded-lg border p-4">
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Student</span>
-                  <span className="font-medium">{selectedQuery.profile?.full_name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Email</span>
-                  <span>{selectedQuery.profile?.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Phone</span>
-                  <span>{selectedQuery.profile?.phone || "-"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Student ID</span>
-                  <span className="font-mono">
-                    {selectedQuery.student_profile?.student_id || "N/A"}
-                  </span>
-                </div>
-              </div>
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  {selectedQuery.title}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedQuery.profile?.full_name} • {categoryLabels[selectedQuery.category]} • {format(parseISO(selectedQuery.created_at), "MMM d, yyyy HH:mm")}
+                </DialogDescription>
+              </DialogHeader>
 
-              {/* Query Content */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">{categoryLabels[selectedQuery.category]}</Badge>
-                  <Badge
-                    className={
-                      selectedQuery.is_resolved
-                        ? "bg-success/10 text-success"
-                        : "bg-warning/10 text-warning"
-                    }
-                  >
-                    {selectedQuery.is_resolved ? "Resolved" : "Open"}
-                  </Badge>
+              <div className="space-y-4">
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Description</p>
+                  <p className="whitespace-pre-wrap">{selectedQuery.description}</p>
                 </div>
-                <h4 className="font-semibold">{selectedQuery.title}</h4>
-                <p className="text-sm text-muted-foreground">{selectedQuery.description}</p>
-              </div>
 
-              <Separator />
-
-              {/* ── COMMENT SECTION ── */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="h-4 w-4 text-muted-foreground" />
-                  <h4 className="font-semibold text-sm">Admin Notes & Comments</h4>
-                  {comments.length > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {comments.length}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-muted-foreground">Student ID</p>
+                    <p className="font-medium">{selectedQuery.student_profile?.student_id || "N/A"}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 p-3">
+                    <p className="text-muted-foreground">Status</p>
+                    <Badge className={selectedQuery.is_resolved ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
+                      {selectedQuery.is_resolved ? "Resolved" : "Open"}
                     </Badge>
-                  )}
+                  </div>
                 </div>
 
-                {/* Comment List */}
-                {loadingComments ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : comments.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-6 text-center">
-                    <MessageCircle className="mb-2 h-8 w-8 text-muted-foreground/50" />
-                    <p className="text-sm text-muted-foreground">No notes yet.</p>
-                    <p className="text-xs text-muted-foreground">
-                      Add a note below to document how this query is being handled.
-                    </p>
-                  </div>
-                ) : (
-                  <ScrollArea className="max-h-52 rounded-lg border p-3">
-                    <div className="space-y-3">
-                      {comments.map((comment) => (
-                        <div key={comment.id} className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium">
-                              {comment.admin_name}
-                            </span>
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              {format(parseISO(comment.created_at), "MMM d, yyyy · h:mm a")}
-                            </span>
-                          </div>
-                          <p className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-                            {comment.comment}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                )}
-
-                {/* Add Comment */}
-                <div className="space-y-2">
-                  <Textarea
-                    placeholder="Add a note on how this issue is being addressed or was resolved…"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    rows={3}
-                    className="resize-none"
-                    onKeyDown={(e) => {
-                      // Ctrl/Cmd + Enter to submit
-                      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-                        handleSubmitComment();
-                      }
-                    }}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Press <kbd className="rounded border px-1 py-0.5 font-mono text-xs">Ctrl+Enter</kbd> to submit
-                  </p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex justify-between gap-3 pt-1">
-                <div className="flex gap-2">
+                <div className="flex justify-end gap-2 pt-2">
                   {!selectedQuery.is_resolved ? (
-                    <Button
-                      onClick={() => handleResolve(selectedQuery.id, true)}
-                      disabled={processingId === selectedQuery.id}
-                    >
-                      {processingId === selectedQuery.id ? (
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Check className="mr-1 h-4 w-4" />
-                      )}
-                      Mark Resolved
+                    <Button onClick={() => handleResolve(selectedQuery.id, true)} disabled={processingId === selectedQuery.id}>
+                      {processingId === selectedQuery.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                      Resolve
                     </Button>
                   ) : (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleResolve(selectedQuery.id, false)}
-                      disabled={processingId === selectedQuery.id}
-                    >
-                      {processingId === selectedQuery.id ? (
-                        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                      ) : (
-                        <X className="mr-1 h-4 w-4" />
-                      )}
-                      Reopen Query
+                    <Button variant="outline" onClick={() => handleResolve(selectedQuery.id, false)} disabled={processingId === selectedQuery.id}>
+                      {processingId === selectedQuery.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <X className="mr-2 h-4 w-4" />}
+                      Reopen
                     </Button>
                   )}
                 </div>
-
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setViewDialogOpen(false)}>
-                    Close
-                  </Button>
-                  <Button
-                    onClick={handleSubmitComment}
-                    disabled={!newComment.trim() || submittingComment}
-                  >
-                    {submittingComment ? (
-                      <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="mr-1 h-4 w-4" />
-                    )}
-                    Add Note
-                  </Button>
-                </div>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
