@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -14,8 +14,8 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { SkeletonTable } from "@/components/SkeletonCard";
-import { Shield, Search, TrendingUp, Users, Calendar, Clock, Download, BarChart3, CheckCircle, XCircle } from "lucide-react";
-import { format, parseISO, subDays, subMonths, startOfWeek, endOfWeek, eachDayOfInterval } from "date-fns";
+import { Shield, Search, TrendingUp, Users, Calendar, Clock, Download, BarChart3, CheckCircle, XCircle, ArrowUpDown, FolderKanban, ClipboardList } from "lucide-react";
+import { format, parseISO, subDays, subMonths, eachDayOfInterval, differenceInDays } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 
 interface Student {
@@ -53,6 +53,9 @@ export default function AdminProgress() {
   const [batchFilter, setBatchFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("week");
+  const [sortBy, setSortBy] = useState("entries-high");
+  const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
+  const [assignmentData, setAssignmentData] = useState<{ byStudent: Record<string, { total: number; submitted: number }> }>({ byStudent: {} });
 
   useEffect(() => {
     if (role === "admin" || role === "faculty") fetchData();
@@ -61,10 +64,13 @@ export default function AdminProgress() {
   const fetchData = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const [batchesRes, studentsRes, diariesRes] = await Promise.all([
+      const [batchesRes, studentsRes, diariesRes, projectMembersRes, assignmentsRes, submissionsRes] = await Promise.all([
         supabase.from("batches").select("id, name, end_date").gt("end_date", today).order("name"),
         supabase.from("student_profiles").select("user_id, student_id, batch_id, usn").eq("status", "approved"),
         supabase.from("internship_diary").select("id, user_id, entry_date, week_number, hours_worked, work_description, title, created_at").order("entry_date", { ascending: false }),
+        supabase.from("project_members").select("user_id"),
+        supabase.from("assignments").select("id, batch_id, deadline"),
+        supabase.from("assignment_submissions").select("student_id, assignment_id"),
       ]);
 
       setBatches(batchesRes.data || []);
@@ -79,6 +85,37 @@ export default function AdminProgress() {
 
       setStudents(studentsWithProfiles as Student[]);
       setDiaryEntries(diariesRes.data || []);
+
+      // Project counts per user
+      const pCounts: Record<string, number> = {};
+      (projectMembersRes.data || []).forEach(pm => {
+        pCounts[pm.user_id] = (pCounts[pm.user_id] || 0) + 1;
+      });
+      setProjectCounts(pCounts);
+
+      // Assignment stats per student
+      const assignmentsByBatch: Record<string, string[]> = {};
+      (assignmentsRes.data || []).forEach(a => {
+        if (!assignmentsByBatch[a.batch_id]) assignmentsByBatch[a.batch_id] = [];
+        assignmentsByBatch[a.batch_id].push(a.id);
+      });
+
+      const submissionsByStudent: Record<string, Set<string>> = {};
+      (submissionsRes.data || []).forEach(s => {
+        if (!submissionsByStudent[s.student_id]) submissionsByStudent[s.student_id] = new Set();
+        submissionsByStudent[s.student_id].add(s.assignment_id);
+      });
+
+      const byStudent: Record<string, { total: number; submitted: number }> = {};
+      studentsWithProfiles.forEach(s => {
+        const batchAssignments = s.batch_id ? (assignmentsByBatch[s.batch_id] || []) : [];
+        const studentSubs = submissionsByStudent[s.user_id] || new Set();
+        byStudent[s.user_id] = {
+          total: batchAssignments.length,
+          submitted: batchAssignments.filter(id => studentSubs.has(id)).length,
+        };
+      });
+      setAssignmentData({ byStudent });
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -86,46 +123,57 @@ export default function AdminProgress() {
     }
   };
 
-  const filteredStudents = students.filter(s => {
-    const batchMatch = batchFilter === "all" || s.batch_id === batchFilter;
-    const searchMatch = !searchQuery || 
-      s.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.student_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.usn?.toLowerCase().includes(searchQuery.toLowerCase());
-    return batchMatch && searchMatch;
-  });
+  const filteredStudents = useMemo(() => {
+    let result = students.filter(s => {
+      const batchMatch = batchFilter === "all" || s.batch_id === batchFilter;
+      const searchMatch = !searchQuery ||
+        s.profile?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.student_id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.usn?.toLowerCase().includes(searchQuery.toLowerCase());
+      return batchMatch && searchMatch;
+    });
+
+    // Sorting
+    const getEntryCount = (userId: string) => diaryEntries.filter(e => e.user_id === userId).length;
+    switch (sortBy) {
+      case "entries-high":
+        result.sort((a, b) => getEntryCount(b.user_id) - getEntryCount(a.user_id));
+        break;
+      case "entries-low":
+        result.sort((a, b) => getEntryCount(a.user_id) - getEntryCount(b.user_id));
+        break;
+      case "name":
+        result.sort((a, b) => (a.profile?.full_name || "").localeCompare(b.profile?.full_name || ""));
+        break;
+      case "fest-id":
+        result.sort((a, b) => (a.student_id || "").localeCompare(b.student_id || ""));
+        break;
+    }
+    return result;
+  }, [students, batchFilter, searchQuery, sortBy, diaryEntries]);
 
   const getStudentEntries = (userId: string) => diaryEntries.filter(e => e.user_id === userId);
 
-  const getTimeFilteredEntries = (entries: DiaryEntry[]) => {
-    const now = new Date();
-    const cutoff = timeRange === "week" ? subDays(now, 7) : subMonths(now, 1);
-    return entries.filter(e => new Date(e.entry_date) >= cutoff);
-  };
-
-  // Analytics data
   const now = new Date();
   const cutoff = timeRange === "week" ? subDays(now, 7) : subMonths(now, 1);
-  const filteredEntries = diaryEntries.filter(e => {
-    const batchMatch = batchFilter === "all" || filteredStudents.some(s => s.user_id === e.user_id);
-    const dateMatch = new Date(e.entry_date) >= cutoff;
-    return batchMatch && dateMatch;
-  });
+
+  const getTimeFilteredEntries = (entries: DiaryEntry[]) => entries.filter(e => new Date(e.entry_date) >= cutoff);
+
+  // Use filteredStudents for all analytics (search-aware)
+  const filteredUserIds = new Set(filteredStudents.map(s => s.user_id));
+  const filteredEntries = diaryEntries.filter(e => filteredUserIds.has(e.user_id) && new Date(e.entry_date) >= cutoff);
 
   // Daily submission data
   const days = eachDayOfInterval({ start: cutoff, end: now });
   const dailyData = days.map(day => {
     const dateStr = format(day, "yyyy-MM-dd");
-    const count = filteredEntries.filter(e => e.entry_date === dateStr).length;
-    return { date: format(day, "MMM dd"), submissions: count };
+    return { date: format(day, "MMM dd"), submissions: filteredEntries.filter(e => e.entry_date === dateStr).length };
   });
 
-  // Weekly hours data
+  // Weekly hours
   const weeklyHoursMap: Record<number, number> = {};
-  filteredEntries.forEach(e => {
-    weeklyHoursMap[e.week_number] = (weeklyHoursMap[e.week_number] || 0) + Number(e.hours_worked);
-  });
-  const weeklyHoursData = Object.entries(weeklyHoursMap).sort(([a], [b]) => Number(a) - Number(b)).map(([week, hours]) => ({ week: `W${week}`, hours }));
+  filteredEntries.forEach(e => { weeklyHoursMap[e.week_number] = (weeklyHoursMap[e.week_number] || 0) + Number(e.hours_worked); });
+  const weeklyHoursData = Object.entries(weeklyHoursMap).sort(([a], [b]) => Number(a) - Number(b)).map(([w, h]) => ({ week: `W${w}`, hours: h }));
 
   // Completion stats
   const totalStudentsFiltered = filteredStudents.length;
@@ -138,23 +186,46 @@ export default function AdminProgress() {
 
   // Batch comparison
   const batchCompData = batches.map(batch => {
-    const batchStudentIds = students.filter(s => s.batch_id === batch.id).map(s => s.user_id);
+    const batchStudentIds = filteredStudents.filter(s => s.batch_id === batch.id).map(s => s.user_id);
     const batchEntries = filteredEntries.filter(e => batchStudentIds.includes(e.user_id));
     return { name: batch.name, entries: batchEntries.length, students: batchStudentIds.length };
   }).filter(b => b.students > 0);
 
+  // Projects & Assignments charts
+  const projectChartData = filteredStudents.slice(0, 20).map(s => ({
+    name: (s.profile?.full_name || "").split(" ")[0],
+    projects: projectCounts[s.user_id] || 0,
+  })).filter(d => d.projects > 0);
+
+  const assignmentChartData = filteredStudents.slice(0, 20).map(s => {
+    const stats = assignmentData.byStudent[s.user_id] || { total: 0, submitted: 0 };
+    return {
+      name: (s.profile?.full_name || "").split(" ")[0],
+      submitted: stats.submitted,
+      missed: stats.total - stats.submitted,
+    };
+  }).filter(d => d.submitted > 0 || d.missed > 0);
+
   const exportCSV = () => {
-    const rows = [["Student Name", "Student ID", "USN", "Entry Date", "Week", "Hours", "Title", "Description", "Submitted At"]];
+    const rows = [["Student Name", "Student ID", "USN", "Entry Date", "Submitted Date", "Status", "Week", "Hours", "Title", "Description", "Projects Worked", "Assignments Submitted", "Assignments Missed"]];
     filteredStudents.forEach(student => {
       const entries = getTimeFilteredEntries(getStudentEntries(student.user_id));
+      const pCount = projectCounts[student.user_id] || 0;
+      const aStats = assignmentData.byStudent[student.user_id] || { total: 0, submitted: 0 };
       if (entries.length === 0) {
-        rows.push([student.profile?.full_name || "", student.student_id || "", student.usn || "", "", "", "", "", "", ""]);
+        rows.push([student.profile?.full_name || "", student.student_id || "", student.usn || "", "", "", "No entries", "", "", "", "", pCount.toString(), aStats.submitted.toString(), (aStats.total - aStats.submitted).toString()]);
       } else {
         entries.forEach(e => {
+          const entryDate = e.entry_date;
+          const submittedDate = format(parseISO(e.created_at), "yyyy-MM-dd");
+          const diff = differenceInDays(parseISO(submittedDate), parseISO(entryDate));
+          const status = diff === 0 ? "On Time" : `Updated after ${diff} day${diff > 1 ? 's' : ''}`;
           rows.push([
             student.profile?.full_name || "", student.student_id || "", student.usn || "",
-            e.entry_date, `Week ${e.week_number}`, e.hours_worked.toString(),
-            e.title || "", e.work_description.replace(/,/g, ";"), format(parseISO(e.created_at), "yyyy-MM-dd HH:mm"),
+            entryDate, submittedDate, status,
+            `Week ${e.week_number}`, e.hours_worked.toString(),
+            e.title || "", e.work_description.replace(/,/g, ";"),
+            pCount.toString(), aStats.submitted.toString(), (aStats.total - aStats.submitted).toString(),
           ]);
         });
       }
@@ -189,7 +260,7 @@ export default function AdminProgress() {
         {/* Filters */}
         <Card>
           <CardContent className="pt-6">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label>Batch</Label>
                 <Select value={batchFilter} onValueChange={setBatchFilter}>
@@ -214,6 +285,18 @@ export default function AdminProgress() {
                   <SelectContent>
                     <SelectItem value="week">Last 7 Days</SelectItem>
                     <SelectItem value="month">Last 30 Days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Sort By</Label>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entries-high">Entries: High → Low</SelectItem>
+                    <SelectItem value="entries-low">Entries: Low → High</SelectItem>
+                    <SelectItem value="name">Name (A-Z)</SelectItem>
+                    <SelectItem value="fest-id">FEST ID</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -252,9 +335,7 @@ export default function AdminProgress() {
         {/* Charts */}
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"><BarChart3 className="h-4 w-4" /> Daily Submissions</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><BarChart3 className="h-4 w-4" /> Daily Submissions</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={dailyData}>
@@ -269,9 +350,7 @@ export default function AdminProgress() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4" /> Weekly Hours</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4" /> Weekly Hours</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
                 <LineChart data={weeklyHoursData}>
@@ -286,9 +365,7 @@ export default function AdminProgress() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Completion Rate</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Completion Rate</CardTitle></CardHeader>
             <CardContent className="flex justify-center">
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
@@ -302,9 +379,7 @@ export default function AdminProgress() {
           </Card>
 
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base"><BarChart3 className="h-4 w-4" /> Batch Comparison</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><BarChart3 className="h-4 w-4" /> Batch Comparison</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={batchCompData}>
@@ -317,6 +392,41 @@ export default function AdminProgress() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
+
+          {projectChartData.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2 text-base"><FolderKanban className="h-4 w-4" /> Projects Worked On</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={projectChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
+                    <Bar dataKey="projects" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {assignmentChartData.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2 text-base"><ClipboardList className="h-4 w-4" /> Assignments: Submitted vs Missed</CardTitle></CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={assignmentChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
+                    <Bar dataKey="submitted" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} name="Submitted" />
+                    <Bar dataKey="missed" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} name="Missed" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Student List */}
@@ -333,6 +443,8 @@ export default function AdminProgress() {
                 {filteredStudents.map(student => {
                   const entries = getTimeFilteredEntries(getStudentEntries(student.user_id));
                   const totalHours = entries.reduce((sum, e) => sum + Number(e.hours_worked), 0);
+                  const pCount = projectCounts[student.user_id] || 0;
+                  const aStats = assignmentData.byStudent[student.user_id] || { total: 0, submitted: 0 };
                   return (
                     <AccordionItem key={student.user_id} value={student.user_id}>
                       <AccordionTrigger className="hover:no-underline">
@@ -340,7 +452,7 @@ export default function AdminProgress() {
                           <span className="font-medium">{student.profile?.full_name || "Unknown"}</span>
                           <Badge variant="outline" className="font-mono text-xs">{student.student_id || "N/A"}</Badge>
                           {student.usn && <Badge variant="secondary" className="text-xs">{student.usn}</Badge>}
-                          <span className="text-sm text-muted-foreground">{entries.length} entries • {totalHours}h</span>
+                          <span className="text-sm text-muted-foreground">{entries.length} entries • {totalHours}h • {pCount} proj • {aStats.submitted}/{aStats.total} assign</span>
                           {entries.length === 0 && <Badge variant="destructive" className="text-xs">No entries</Badge>}
                         </div>
                       </AccordionTrigger>
@@ -349,21 +461,26 @@ export default function AdminProgress() {
                           <p className="text-muted-foreground py-4 text-center">No diary entries in selected time range.</p>
                         ) : (
                           <div className="space-y-2 pt-2">
-                            {entries.map(entry => (
-                              <div key={entry.id} className="rounded-lg border p-3 bg-muted/30">
-                                <div className="flex flex-wrap items-center gap-2 mb-1">
-                                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-sm font-medium">{format(parseISO(entry.entry_date), "EEEE, MMM d")}</span>
-                                  <Badge variant="outline" className="text-xs">Week {entry.week_number}</Badge>
-                                  <Badge variant="secondary" className="text-xs">{entry.hours_worked}h</Badge>
-                                  <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
-                                    <Clock className="h-3 w-3" /> {format(parseISO(entry.created_at), "MMM d, HH:mm")}
-                                  </span>
+                            {entries.map(entry => {
+                              const diff = differenceInDays(parseISO(format(parseISO(entry.created_at), "yyyy-MM-dd")), parseISO(entry.entry_date));
+                              const statusLabel = diff === 0 ? "On Time" : `Late by ${diff}d`;
+                              return (
+                                <div key={entry.id} className="rounded-lg border p-3 bg-muted/30">
+                                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                                    <Calendar className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-sm font-medium">{format(parseISO(entry.entry_date), "EEEE, MMM d")}</span>
+                                    <Badge variant="outline" className="text-xs">Week {entry.week_number}</Badge>
+                                    <Badge variant="secondary" className="text-xs">{entry.hours_worked}h</Badge>
+                                    <Badge variant={diff === 0 ? "default" : "destructive"} className="text-xs">{statusLabel}</Badge>
+                                    <span className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
+                                      <Clock className="h-3 w-3" /> {format(parseISO(entry.created_at), "MMM d, HH:mm")}
+                                    </span>
+                                  </div>
+                                  {entry.title && <p className="text-sm font-medium">{entry.title}</p>}
+                                  <p className="text-sm text-muted-foreground line-clamp-2">{entry.work_description}</p>
                                 </div>
-                                {entry.title && <p className="text-sm font-medium">{entry.title}</p>}
-                                <p className="text-sm text-muted-foreground line-clamp-2">{entry.work_description}</p>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </AccordionContent>

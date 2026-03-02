@@ -9,6 +9,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 // Pages
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import InternshipDiary from "./pages/InternshipDiary";
@@ -32,6 +33,7 @@ import AdminAssignments from "./pages/admin/AdminAssignments";
 import AdminProgress from "./pages/admin/AdminProgress";
 import AdminCalendar from "./pages/admin/AdminCalendar";
 import StudentAssignments from "./pages/StudentAssignments";
+import StudentProgress from "./pages/StudentProgress";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +67,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route path="/dashboard" element={<ProtectedRoute><FacultyDashboardRedirect><Dashboard /></FacultyDashboardRedirect></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
@@ -76,6 +79,7 @@ function AppRoutes() {
       <Route path="/approvals" element={<ProtectedRoute><Approvals /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><StudentCalendar /></ProtectedRoute>} />
       <Route path="/assignments" element={<ProtectedRoute><StudentAssignments /></ProtectedRoute>} />
+      <Route path="/my-progress" element={<ProtectedRoute><StudentProgress /></ProtectedRoute>} />
 
       {/* Shared admin/faculty routes */}
       <Route path="/students" element={<ProtectedRoute><AdminStudents /></ProtectedRoute>} />
