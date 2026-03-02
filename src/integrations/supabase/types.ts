@@ -578,6 +578,7 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      delete_student_cascade: { Args: { _user_id: string }; Returns: undefined }
       generate_student_id: {
         Args: { batch_year: string; course_code: string }
         Returns: string

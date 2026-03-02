@@ -30,8 +30,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
-import { Shield, Users, Filter, Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Shield, Users, Filter, Eye, Search, ChevronLeft, ChevronRight, Trash2, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import {
   Pagination,
   PaginationContent,
@@ -85,6 +96,36 @@ export default function AdminStudents() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteStudent, setDeleteStudent] = useState<Student | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { toast } = useToast();
+
+  const handleDeleteStudent = async () => {
+    if (!deleteStudent) return;
+    setDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-student`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ user_id: deleteStudent.user_id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to delete');
+      
+      setStudents(prev => prev.filter(s => s.user_id !== deleteStudent.user_id));
+      toast({ title: "Student Deleted", description: `${deleteStudent.profile?.full_name || 'Student'} and all related records have been removed.` });
+    } catch (error: any) {
+      console.error("Delete error:", error);
+      toast({ title: "Delete Failed", description: error.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+      setDeleteStudent(null);
+    }
+  };
 
   // Pagination logic
   const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
@@ -387,7 +428,7 @@ export default function AdminStudents() {
                       <TableHead>Phone</TableHead>
                       <TableHead>Batch</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">View</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -420,16 +461,28 @@ export default function AdminStudents() {
                         </TableCell>
                         <TableCell>{getStatusBadge(student.status)}</TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedStudent(student);
-                              setViewDialogOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedStudent(student);
+                                setViewDialogOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {role === "admin" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setDeleteStudent(student)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -621,6 +674,28 @@ export default function AdminStudents() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteStudent} onOpenChange={(open) => !open && setDeleteStudent(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Student Permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{deleteStudent?.profile?.full_name}</strong> ({deleteStudent?.student_id || deleteStudent?.profile?.email}) and ALL their records including diary entries, projects, assignments, leave requests, and queries. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteStudent}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Delete Permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

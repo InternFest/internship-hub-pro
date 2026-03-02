@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
 const loginSchema = z.object({
@@ -30,6 +32,7 @@ export default function Auth() {
   const mode = searchParams.get("mode") || "login";
   const navigate = useNavigate();
   const { signIn, signUp, user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -47,6 +50,10 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  // Forgot password state
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
+
   useEffect(() => {
     if (!authLoading && user) {
       navigate("/dashboard");
@@ -63,9 +70,7 @@ export default function Auth() {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0] as string] = err.message;
-          }
+          if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
         });
         setErrors(fieldErrors);
         return;
@@ -73,11 +78,21 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signIn(loginEmail, loginPassword);
-    setIsLoading(false);
-
-    if (!error) {
-      navigate("/dashboard");
+    try {
+      const { error } = await signIn(loginEmail, loginPassword);
+      if (!error) navigate("/dashboard");
+    } catch (err: any) {
+      console.error("Login error:", err);
+      const msg = err?.message || "Unknown error";
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+        toast({
+          title: "Connection Error",
+          description: "Unable to reach the server. Please check your internet connection and try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -86,21 +101,12 @@ export default function Auth() {
     setErrors({});
 
     try {
-      registerSchema.parse({
-        fullName,
-        email,
-        phone,
-        dateOfBirth,
-        password,
-        confirmPassword,
-      });
+      registerSchema.parse({ fullName, email, phone, dateOfBirth, password, confirmPassword });
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         error.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0] as string] = err.message;
-          }
+          if (err.path[0]) fieldErrors[err.path[0] as string] = err.message;
         });
         setErrors(fieldErrors);
         return;
@@ -108,15 +114,58 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(email, password, {
-      full_name: fullName,
-      phone,
-      date_of_birth: dateOfBirth,
-    });
-    setIsLoading(false);
+    try {
+      const { error } = await signUp(email, password, {
+        full_name: fullName,
+        phone,
+        date_of_birth: dateOfBirth,
+      });
+      if (!error) navigate("/auth?mode=login");
+    } catch (err: any) {
+      console.error("Register error:", err);
+      if (err?.message?.includes("Failed to fetch")) {
+        toast({
+          title: "Connection Error",
+          description: "Unable to reach the server. Please check your internet connection and try again.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    if (!error) {
-      navigate("/auth?mode=login");
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrors({});
+
+    if (!forgotEmail || !z.string().email().safeParse(forgotEmail).success) {
+      setErrors({ forgotEmail: "Please enter a valid email address" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      setForgotSent(true);
+      toast({
+        title: "Reset Link Sent",
+        description: "Check your email for the password reset link.",
+      });
+    } catch (err: any) {
+      console.error("Reset error:", err);
+      toast({
+        title: "Reset Failed",
+        description: err?.message?.includes("Failed to fetch")
+          ? "Unable to reach the server. Please check your connection."
+          : err.message || "Failed to send reset email.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -130,12 +179,10 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      {/* Decorative elements */}
       <div className="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
       <div className="absolute -left-40 bottom-0 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
 
       <div className="container relative flex min-h-screen flex-col items-center justify-center py-8">
-        {/* Back link */}
         <Link
           to="/"
           className="absolute left-4 top-4 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground md:left-8 md:top-8"
@@ -151,10 +198,12 @@ export default function Auth() {
             </div>
             <div>
               <CardTitle className="text-2xl font-bold">
-                {mode === "login" ? "Welcome Back" : "Create Account"}
+                {mode === "forgot" ? "Reset Password" : mode === "login" ? "Welcome Back" : "Create Account"}
               </CardTitle>
               <CardDescription>
-                {mode === "login"
+                {mode === "forgot"
+                  ? "Enter your email to receive a reset link"
+                  : mode === "login"
                   ? "Sign in to access your internship portal"
                   : "Register to start your internship journey"}
               </CardDescription>
@@ -162,7 +211,51 @@ export default function Auth() {
           </CardHeader>
 
           <CardContent>
-            {mode === "login" ? (
+            {mode === "forgot" ? (
+              forgotSent ? (
+                <div className="space-y-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    A password reset link has been sent to <strong>{forgotEmail}</strong>. Please check your inbox and follow the instructions.
+                  </p>
+                  <Link to="/auth?mode=login" className="text-sm font-medium text-primary hover:underline">
+                    Back to Login
+                  </Link>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Email</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      disabled={isLoading}
+                      className={errors.forgotEmail ? "border-destructive" : ""}
+                    />
+                    {errors.forgotEmail && (
+                      <p className="text-xs text-destructive">{errors.forgotEmail}</p>
+                    )}
+                  </div>
+
+                  <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                    {isLoading ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
+                    ) : (
+                      "Send Reset Link"
+                    )}
+                  </Button>
+
+                  <p className="text-center text-sm text-muted-foreground">
+                    Remember your password?{" "}
+                    <Link to="/auth?mode=login" className="font-medium text-primary hover:underline">
+                      Sign in
+                    </Link>
+                  </p>
+                </form>
+              )
+            ) : mode === "login" ? (
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
@@ -175,9 +268,7 @@ export default function Auth() {
                     disabled={isLoading}
                     className={errors.email ? "border-destructive" : ""}
                   />
-                  {errors.email && (
-                    <p className="text-xs text-destructive">{errors.email}</p>
-                  )}
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -197,27 +288,21 @@ export default function Auth() {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && (
-                    <p className="text-xs text-destructive">{errors.password}</p>
-                  )}
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 </div>
 
-
-                
+                <div className="text-right">
+                  <Link to="/auth?mode=forgot" className="text-sm text-primary hover:underline">
+                    Forgot Password?
+                  </Link>
+                </div>
 
                 <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                   {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</>
                   ) : (
                     "Sign In"
                   )}
@@ -225,10 +310,7 @@ export default function Auth() {
 
                 <p className="text-center text-sm text-muted-foreground">
                   Don't have an account?{" "}
-                  <Link
-                    to="/auth?mode=register"
-                    className="font-medium text-primary hover:underline"
-                  >
+                  <Link to="/auth?mode=register" className="font-medium text-primary hover:underline">
                     Register
                   </Link>
                 </p>
@@ -237,118 +319,48 @@ export default function Auth() {
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName">Full Name</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    disabled={isLoading}
-                    className={errors.fullName ? "border-destructive" : ""}
-                  />
-                  {errors.fullName && (
-                    <p className="text-xs text-destructive">{errors.fullName}</p>
-                  )}
+                  <Input id="fullName" type="text" placeholder="John Doe" value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={isLoading} className={errors.fullName ? "border-destructive" : ""} />
+                  {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                    className={errors.email ? "border-destructive" : ""}
-                  />
-                  {errors.email && (
-                    <p className="text-xs text-destructive">{errors.email}</p>
-                  )}
+                  <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} disabled={isLoading} className={errors.email ? "border-destructive" : ""} />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="1234567890"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    disabled={isLoading}
-                    className={errors.phone ? "border-destructive" : ""}
-                  />
-                  {errors.phone && (
-                    <p className="text-xs text-destructive">{errors.phone}</p>
-                  )}
+                  <Input id="phone" type="tel" placeholder="1234567890" value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))} disabled={isLoading} className={errors.phone ? "border-destructive" : ""} />
+                  {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                  <Input
-                    id="dateOfBirth"
-                    type="date"
-                    value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
-                    disabled={isLoading}
-                    className={errors.dateOfBirth ? "border-destructive" : ""}
-                  />
-                  {errors.dateOfBirth && (
-                    <p className="text-xs text-destructive">{errors.dateOfBirth}</p>
-                  )}
+                  <Input id="dateOfBirth" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} disabled={isLoading} className={errors.dateOfBirth ? "border-destructive" : ""} />
+                  {errors.dateOfBirth && <p className="text-xs text-destructive">{errors.dateOfBirth}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
                   <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="********"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
-                      className={errors.password ? "border-destructive" : ""}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                    <Input id="password" type={showPassword ? "text" : "password"} placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} disabled={isLoading} className={errors.password ? "border-destructive" : ""} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  {errors.password && (
-                    <p className="text-xs text-destructive">{errors.password}</p>
-                  )}
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm Password</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    placeholder="********"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={isLoading}
-                    className={errors.confirmPassword ? "border-destructive" : ""}
-                  />
-                  {errors.confirmPassword && (
-                    <p className="text-xs text-destructive">{errors.confirmPassword}</p>
-                  )}
+                  <Input id="confirmPassword" type="password" placeholder="********" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} disabled={isLoading} className={errors.confirmPassword ? "border-destructive" : ""} />
+                  {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
                 </div>
 
                 <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                   {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating account...
-                    </>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...</>
                   ) : (
                     "Create Account"
                   )}
@@ -356,10 +368,7 @@ export default function Auth() {
 
                 <p className="text-center text-sm text-muted-foreground">
                   Already have an account?{" "}
-                  <Link
-                    to="/auth?mode=login"
-                    className="font-medium text-primary hover:underline"
-                  >
+                  <Link to="/auth?mode=login" className="font-medium text-primary hover:underline">
                     Sign in
                   </Link>
                 </p>

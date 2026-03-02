@@ -29,6 +29,7 @@ interface NavItem {
 const studentNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Profile", href: "/profile", icon: User },
+  { title: "My Progress", href: "/my-progress", icon: TrendingUp },
   { title: "Resources", href: "/resources", icon: Library },
   { title: "Assignments", href: "/assignments", icon: ClipboardList },
   { title: "Calendar", href: "/calendar", icon: Calendar },
