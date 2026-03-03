@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { GraduationCap, Loader2, Eye, EyeOff, ArrowLeft, WifiOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 
@@ -27,6 +27,13 @@ const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
+// Helper to detect network errors
+const isNetworkError = (msg: string) =>
+  msg.includes("Failed to fetch") ||
+  msg.includes("NetworkError") ||
+  msg.includes("ERR_CONNECTION_TIMED_OUT") ||
+  msg.includes("network");
+
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get("mode") || "login";
@@ -37,6 +44,8 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // FIX: Track if auth check timed out so we don't show infinite spinner
+  const [authTimedOut, setAuthTimedOut] = useState(false);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -53,6 +62,15 @@ export default function Auth() {
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+
+  // FIX: If authLoading takes more than 8 seconds, stop showing spinner
+  useEffect(() => {
+    if (!authLoading) return;
+    const timeout = setTimeout(() => {
+      setAuthTimedOut(true);
+    }, 8000);
+    return () => clearTimeout(timeout);
+  }, [authLoading]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -80,17 +98,42 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const { error } = await signIn(loginEmail, loginPassword);
-      if (!error) navigate("/dashboard");
+
+      // FIX: Actually handle the returned error instead of ignoring it
+      if (error) {
+        const msg = error.message || "";
+        if (isNetworkError(msg)) {
+          toast({
+            title: "Network Error",
+            description: "Unable to reach the server. Please switch to mobile data or use a VPN (e.g. Cloudflare WARP) and try again.",
+            variant: "destructive",
+          });
+        } else if (msg.includes("Invalid login credentials")) {
+          toast({
+            title: "Login Failed",
+            description: "Invalid email or password. Please try again.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Login Failed",
+            description: msg || "An unexpected error occurred.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err: any) {
       console.error("Login error:", err);
-      const msg = err?.message || "Unknown error";
-      if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-        toast({
-          title: "Connection Error",
-          description: "Unable to reach the server. Please check your internet connection and try again.",
-          variant: "destructive",
-        });
-      }
+      const msg = err?.message || "";
+      toast({
+        title: isNetworkError(msg) ? "Network Error" : "Login Failed",
+        description: isNetworkError(msg)
+          ? "Unable to reach the server. Please switch to mobile data or use a VPN (e.g. Cloudflare WARP) and try again."
+          : msg || "An unexpected error occurred.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -120,16 +163,34 @@ export default function Auth() {
         phone,
         date_of_birth: dateOfBirth,
       });
-      if (!error) navigate("/auth?mode=login");
-    } catch (err: any) {
-      console.error("Register error:", err);
-      if (err?.message?.includes("Failed to fetch")) {
+
+      // FIX: Handle returned error
+      if (error) {
+        const msg = error.message || "";
         toast({
-          title: "Connection Error",
-          description: "Unable to reach the server. Please check your internet connection and try again.",
+          title: isNetworkError(msg) ? "Network Error" : "Registration Failed",
+          description: isNetworkError(msg)
+            ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again."
+            : msg || "An unexpected error occurred.",
           variant: "destructive",
         });
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "You can now sign in with your credentials.",
+        });
+        navigate("/auth?mode=login");
       }
+    } catch (err: any) {
+      console.error("Register error:", err);
+      const msg = err?.message || "";
+      toast({
+        title: isNetworkError(msg) ? "Network Error" : "Registration Failed",
+        description: isNetworkError(msg)
+          ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again."
+          : msg || "An unexpected error occurred.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -157,11 +218,12 @@ export default function Auth() {
       });
     } catch (err: any) {
       console.error("Reset error:", err);
+      const msg = err?.message || "";
       toast({
         title: "Reset Failed",
-        description: err?.message?.includes("Failed to fetch")
-          ? "Unable to reach the server. Please check your connection."
-          : err.message || "Failed to send reset email.",
+        description: isNetworkError(msg)
+          ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again."
+          : msg || "Failed to send reset email.",
         variant: "destructive",
       });
     } finally {
@@ -169,7 +231,8 @@ export default function Auth() {
     }
   };
 
-  if (authLoading) {
+  // FIX: Show login page after timeout instead of infinite spinner
+  if (authLoading && !authTimedOut) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -190,6 +253,17 @@ export default function Auth() {
           <ArrowLeft className="h-4 w-4" />
           Back to home
         </Link>
+
+        {/* FIX: Show network warning banner when auth timed out */}
+        {authTimedOut && (
+          <div className="mb-4 w-full max-w-md rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800 flex items-center gap-2">
+            <WifiOff className="h-4 w-4 shrink-0" />
+            <span>
+              Network issue detected. If login fails, please switch to <strong>mobile data</strong> or use{" "}
+              <strong>Cloudflare WARP</strong> (free VPN).
+            </span>
+          </div>
+        )}
 
         <Card className="w-full max-w-md border-0 shadow-elevated animate-scale-in">
           <CardHeader className="space-y-4 text-center">
