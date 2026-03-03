@@ -21,6 +21,7 @@ export type Database = {
           description: string
           id: string
           is_resolved: boolean | null
+          resolution_comment: string | null
           resolved_at: string | null
           title: string
           user_id: string
@@ -31,6 +32,7 @@ export type Database = {
           description: string
           id?: string
           is_resolved?: boolean | null
+          resolution_comment?: string | null
           resolved_at?: string | null
           title: string
           user_id: string
@@ -41,6 +43,7 @@ export type Database = {
           description?: string
           id?: string
           is_resolved?: boolean | null
+          resolution_comment?: string | null
           resolved_at?: string | null
           title?: string
           user_id?: string
@@ -54,7 +57,9 @@ export type Database = {
           file_url: string
           id: string
           student_id: string
+          submission_type: string | null
           submitted_at: string
+          text_content: string | null
         }
         Insert: {
           assignment_id: string
@@ -62,7 +67,9 @@ export type Database = {
           file_url: string
           id?: string
           student_id: string
+          submission_type?: string | null
           submitted_at?: string
+          text_content?: string | null
         }
         Update: {
           assignment_id?: string
@@ -70,7 +77,9 @@ export type Database = {
           file_url?: string
           id?: string
           student_id?: string
+          submission_type?: string | null
           submitted_at?: string
+          text_content?: string | null
         }
         Relationships: [
           {

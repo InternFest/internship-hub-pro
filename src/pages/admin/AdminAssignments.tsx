@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -21,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, ClipboardList, Lock, Users, CheckCircle, XCircle, FileText, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, ClipboardList, Lock, Users, CheckCircle, XCircle, FileText, Pencil, Trash2, Image, Link2, Type } from "lucide-react";
 import { format } from "date-fns";
 
 interface Assignment {
@@ -51,6 +52,8 @@ interface Submission {
   file_url: string;
   file_name: string;
   submitted_at: string;
+  text_content: string | null;
+  submission_type: string | null;
 }
 
 interface StudentInfo {
@@ -87,7 +90,13 @@ export default function AdminAssignments() {
   const [links, setLinks] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [deadline, setDeadline] = useState("");
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfFiles, setPdfFiles] = useState<FileList | null>(null);
+
+  // Submission type toggles for assignment creation
+  const [allowPdf, setAllowPdf] = useState(true);
+  const [allowLink, setAllowLink] = useState(false);
+  const [allowText, setAllowText] = useState(false);
+  const [allowImage, setAllowImage] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -130,7 +139,8 @@ export default function AdminAssignments() {
   const resetForm = () => {
     setBatchId(""); setAssignmentNumber("1"); setTitle(""); setDescription("");
     setLinks(""); setStartDate(new Date().toISOString().split("T")[0]); setDeadline("");
-    setPdfFile(null); setEditMode(false); setEditingAssignment(null);
+    setPdfFiles(null); setEditMode(false); setEditingAssignment(null);
+    setAllowPdf(true); setAllowLink(false); setAllowText(false); setAllowImage(false);
   };
 
   const populateFormForEdit = (assignment: Assignment) => {
@@ -143,7 +153,7 @@ export default function AdminAssignments() {
     setLinks(assignment.links || "");
     setStartDate(assignment.start_date);
     setDeadline(assignment.deadline);
-    setPdfFile(null);
+    setPdfFiles(null);
     setDialogOpen(true);
   };
 
@@ -156,15 +166,29 @@ export default function AdminAssignments() {
     setSaving(true);
     try {
       let pdfUrl = editingAssignment?.pdf_url || null;
-      if (pdfFile) {
+      if (pdfFiles && pdfFiles.length > 0) {
         setUploading(true);
-        const fileExt = pdfFile.name.split(".").pop();
-        const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from("assignment-files").upload(filePath, pdfFile);
-        if (uploadError) throw uploadError;
-        pdfUrl = filePath;
+        // Upload first file as primary PDF (multiple files stored as comma-separated)
+        const urls: string[] = [];
+        for (let i = 0; i < pdfFiles.length; i++) {
+          const file = pdfFiles[i];
+          const fileExt = file.name.split(".").pop();
+          const filePath = `${user.id}/${Date.now()}_${i}.${fileExt}`;
+          const { error: uploadError } = await supabase.storage.from("assignment-files").upload(filePath, file);
+          if (uploadError) throw uploadError;
+          urls.push(filePath);
+        }
+        pdfUrl = urls.join(",");
         setUploading(false);
       }
+
+      // Store allowed submission types in description metadata
+      const submissionTypes = [
+        allowPdf && "pdf",
+        allowLink && "link",
+        allowText && "text",
+        allowImage && "image",
+      ].filter(Boolean).join(",");
 
       const payload = {
         batch_id: batchId,
@@ -172,7 +196,7 @@ export default function AdminAssignments() {
         title,
         description: description || null,
         pdf_url: pdfUrl,
-        links: links || null,
+        links: links ? `${links}${submissionTypes ? `|types:${submissionTypes}` : ""}` : (submissionTypes ? `|types:${submissionTypes}` : null),
         start_date: startDate,
         deadline,
       };
@@ -204,7 +228,8 @@ export default function AdminAssignments() {
     setDeleting(true);
     try {
       if (deletingAssignment.pdf_url) {
-        await supabase.storage.from("assignment-files").remove([deletingAssignment.pdf_url]);
+        const urls = deletingAssignment.pdf_url.split(",");
+        await supabase.storage.from("assignment-files").remove(urls);
       }
       const { error } = await supabase.from("assignments").delete().eq("id", deletingAssignment.id);
       if (error) throw error;
@@ -225,7 +250,7 @@ export default function AdminAssignments() {
     setTrackingDialogOpen(true);
     try {
       const { data: subs } = await supabase.from("assignment_submissions").select("*").eq("assignment_id", assignment.id);
-      setSubmissions(subs || []);
+      setSubmissions((subs || []) as Submission[]);
 
       const { data: studentProfiles } = await supabase
         .from("student_profiles").select("user_id, student_id").eq("batch_id", assignment.batch_id).eq("status", "approved");
@@ -275,7 +300,7 @@ export default function AdminAssignments() {
     );
   }
 
-  const submittedStudentIds = submissions.map((s) => s.student_id);
+  const submittedStudentIds = [...new Set(submissions.map((s) => s.student_id))];
   const submittedStudents = batchStudents.filter((s) => submittedStudentIds.includes(s.user_id));
   const notSubmittedStudents = batchStudents.filter((s) => !submittedStudentIds.includes(s.user_id));
 
@@ -333,10 +358,39 @@ export default function AdminAssignments() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>PDF Attachment {editMode ? "(leave empty to keep current)" : ""}</Label>
-                  <Input type="file" accept=".pdf" onChange={(e) => setPdfFile(e.target.files?.[0] || null)} />
-                  {pdfFile && <Badge variant="outline">{pdfFile.name}</Badge>}
+                  <Label>PDF Attachments {editMode ? "(leave empty to keep current)" : ""}</Label>
+                  <Input type="file" accept=".pdf,.doc,.docx" multiple onChange={(e) => setPdfFiles(e.target.files)} />
+                  {pdfFiles && Array.from(pdfFiles).map((f, i) => <Badge key={i} variant="outline" className="mr-1">{f.name}</Badge>)}
                 </div>
+
+                {/* Allowed submission types */}
+                <div className="space-y-2">
+                  <Label>Allowed Submission Types</Label>
+                  <p className="text-xs text-muted-foreground">Students can submit any combination of selected types.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox checked={allowPdf} onCheckedChange={(c) => setAllowPdf(!!c)} />
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">PDF / Files</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox checked={allowLink} onCheckedChange={(c) => setAllowLink(!!c)} />
+                      <Link2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">External Link</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox checked={allowText} onCheckedChange={(c) => setAllowText(!!c)} />
+                      <Type className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Text Input</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox checked={allowImage} onCheckedChange={(c) => setAllowImage(!!c)} />
+                      <Image className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">Image Upload</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="flex justify-end gap-3 pt-4">
                   <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                   <Button onClick={handleSubmit} disabled={saving || uploading}>
@@ -426,24 +480,38 @@ export default function AdminAssignments() {
                     <p className="text-center text-muted-foreground py-8">No submissions yet.</p>
                   ) : (
                     submittedStudents.map((student) => {
-                      const sub = submissions.find((s) => s.student_id === student.user_id);
+                      const studentSubs = submissions.filter((s) => s.student_id === student.user_id);
                       return (
-                        <div key={student.user_id} className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div key={student.user_id} className="rounded-lg border p-3 space-y-2">
                           <div className="flex items-center gap-2">
                             <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
                             <div>
                               <p className="font-medium text-sm">{student.profiles?.full_name}</p>
-                              <p className="text-xs text-muted-foreground">{student.student_id}</p>
+                              <p className="text-xs text-muted-foreground">{student.student_id} • {studentSubs.length} submission(s)</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground">{sub && format(new Date(sub.submitted_at), "MMM dd, HH:mm")}</span>
-                            {sub && (
-                              <Button variant="outline" size="sm" onClick={() => handleViewFile(sub.file_url)}>
-                                <FileText className="mr-1 h-3 w-3" /> View
-                              </Button>
-                            )}
-                          </div>
+                          {studentSubs.map((sub) => (
+                            <div key={sub.id} className="flex items-center justify-between pl-6 text-xs border-t pt-1">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">{sub.submission_type || "file"}</Badge>
+                                <span className="text-muted-foreground">{sub.file_name}</span>
+                                <span className="text-muted-foreground">{format(new Date(sub.submitted_at), "MMM dd, HH:mm")}</span>
+                              </div>
+                              {sub.file_url && sub.submission_type !== "text" && sub.submission_type !== "link" && (
+                                <Button variant="outline" size="sm" onClick={() => handleViewFile(sub.file_url)}>
+                                  <FileText className="mr-1 h-3 w-3" /> View
+                                </Button>
+                              )}
+                              {sub.submission_type === "link" && sub.text_content && (
+                                <Button variant="outline" size="sm" onClick={() => window.open(sub.text_content!, "_blank")}>
+                                  <Link2 className="mr-1 h-3 w-3" /> Open
+                                </Button>
+                              )}
+                              {sub.submission_type === "text" && sub.text_content && (
+                                <span className="text-muted-foreground max-w-[200px] truncate">{sub.text_content}</span>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       );
                     })
