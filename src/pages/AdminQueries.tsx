@@ -9,19 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +29,7 @@ interface AdminQuery {
   category: QueryCategory;
   description: string;
   is_resolved: boolean;
+  resolution_comment: string | null;
   created_at: string;
 }
 
@@ -65,7 +57,6 @@ export default function AdminQueries() {
 
   const fetchQueries = async () => {
     if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from("admin_queries")
@@ -74,7 +65,7 @@ export default function AdminQueries() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setQueries(data || []);
+      setQueries((data || []) as AdminQuery[]);
     } catch (error) {
       console.error("Error fetching queries:", error);
     } finally {
@@ -82,30 +73,17 @@ export default function AdminQueries() {
     }
   };
 
-  useEffect(() => {
-    fetchQueries();
-  }, [user]);
+  useEffect(() => { fetchQueries(); }, [user]);
 
   const handleSubmit = async () => {
     if (!user) return;
-
     setErrors({});
-
-    // Validate form
     try {
-      adminQuerySchema.parse({
-        title,
-        category,
-        description,
-      });
+      adminQuerySchema.parse({ title, category, description });
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) {
-            fieldErrors[err.path[0] as string] = err.message;
-          }
-        });
+        error.errors.forEach((err) => { if (err.path[0]) fieldErrors[err.path[0] as string] = err.message; });
         setErrors(fieldErrors);
         return;
       }
@@ -113,41 +91,21 @@ export default function AdminQueries() {
 
     setSaving(true);
     try {
-      const { error } = await supabase.from("admin_queries").insert({
-        user_id: user.id,
-        title,
-        category,
-        description,
-      });
-
+      const { error } = await supabase.from("admin_queries").insert({ user_id: user.id, title, category, description });
       if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Query submitted successfully.",
-      });
-
+      toast({ title: "Success", description: "Query submitted successfully." });
       setDialogOpen(false);
       resetForm();
       fetchQueries();
     } catch (error) {
-      console.error("Error submitting query:", error);
-      toast({
-        title: "Error",
-        description: "Failed to submit query.",
-        variant: "destructive",
-      });
+      console.error("Error:", error);
+      toast({ title: "Error", description: "Failed to submit query.", variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  const resetForm = () => {
-    setTitle("");
-    setCategory("other");
-    setDescription("");
-    setErrors({});
-  };
+  const resetForm = () => { setTitle(""); setCategory("other"); setDescription(""); setErrors({}); };
 
   const openCount = queries.filter((q) => !q.is_resolved).length;
   const resolvedCount = queries.filter((q) => q.is_resolved).length;
@@ -158,21 +116,13 @@ export default function AdminQueries() {
         <div className="flex flex-col items-center justify-center py-12 fade-in">
           <Lock className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
           <h3 className="text-lg font-semibold">Access Restricted</h3>
-          <p className="text-muted-foreground">
-            This feature is available after your profile is approved.
-          </p>
+          <p className="text-muted-foreground">This feature is available after your profile is approved.</p>
         </div>
       </DashboardLayout>
     );
   }
 
-  if (loading) {
-    return (
-      <DashboardLayout>
-        <SkeletonTable />
-      </DashboardLayout>
-    );
-  }
+  if (loading) return <DashboardLayout><SkeletonTable /></DashboardLayout>;
 
   return (
     <DashboardLayout>
@@ -182,46 +132,25 @@ export default function AdminQueries() {
             <h1 className="text-2xl font-bold md:text-3xl">Write to Admin</h1>
             <p className="text-muted-foreground">Submit queries or concerns to administrators.</p>
           </div>
-
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button className="transition-smooth hover:scale-105">
-                <Plus className="mr-2 h-4 w-4" />
-                New Query
-              </Button>
+              <Button className="transition-smooth hover:scale-105"><Plus className="mr-2 h-4 w-4" /> New Query</Button>
             </DialogTrigger>
             <DialogContent className="scale-in">
               <DialogHeader>
                 <DialogTitle>Submit a Query</DialogTitle>
-                <DialogDescription>
-                  Send a message to the administrators.
-                </DialogDescription>
+                <DialogDescription>Send a message to the administrators.</DialogDescription>
               </DialogHeader>
-
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="title">Title * (min 3 characters)</Label>
-                  <Input
-                    id="title"
-                    placeholder="Brief summary of your query..."
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    className={errors.title ? "border-destructive" : ""}
-                  />
-                  {errors.title && (
-                    <p className="text-xs text-destructive">{errors.title}</p>
-                  )}
+                  <Input id="title" placeholder="Brief summary..." value={title} onChange={(e) => setTitle(e.target.value)} className={errors.title ? "border-destructive" : ""} />
+                  {errors.title && <p className="text-xs text-destructive">{errors.title}</p>}
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category *</Label>
+                  <Label>Category *</Label>
                   <Select value={category} onValueChange={(v) => setCategory(v as QueryCategory)}>
-                    <SelectTrigger className={errors.category ? "border-destructive" : ""}>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger className={errors.category ? "border-destructive" : ""}><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="course">Course</SelectItem>
                       <SelectItem value="faculty">Faculty</SelectItem>
@@ -230,39 +159,16 @@ export default function AdminQueries() {
                       <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
-                  {errors.category && (
-                    <p className="text-xs text-destructive">{errors.category}</p>
-                  )}
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description * (min 20 characters)</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your query in detail..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={5}
-                    className={errors.description ? "border-destructive" : ""}
-                  />
-                  {errors.description && (
-                    <p className="text-xs text-destructive">{errors.description}</p>
-                  )}
+                  <Label>Description * (min 20 characters)</Label>
+                  <Textarea placeholder="Describe your query..." value={description} onChange={(e) => setDescription(e.target.value)} rows={5} className={errors.description ? "border-destructive" : ""} />
+                  {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
                 </div>
-
                 <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancel
-                  </Button>
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
                   <Button onClick={handleSubmit} disabled={saving}>
-                    {saving ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      "Submit Query"
-                    )}
+                    {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : "Submit Query"}
                   </Button>
                 </div>
               </div>
@@ -274,25 +180,14 @@ export default function AdminQueries() {
         <div className="grid gap-4 sm:grid-cols-2 slide-up">
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10">
-                <Clock className="h-6 w-6 text-warning" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{openCount}</p>
-                <p className="text-sm text-muted-foreground">Open Queries</p>
-              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-warning/10"><Clock className="h-6 w-6 text-warning" /></div>
+              <div><p className="text-2xl font-bold">{openCount}</p><p className="text-sm text-muted-foreground">Open Queries</p></div>
             </CardContent>
           </Card>
-
           <Card className="card-hover">
             <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10">
-                <CheckCircle className="h-6 w-6 text-success" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{resolvedCount}</p>
-                <p className="text-sm text-muted-foreground">Resolved</p>
-              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-success/10"><CheckCircle className="h-6 w-6 text-success" /></div>
+              <div><p className="text-2xl font-bold">{resolvedCount}</p><p className="text-sm text-muted-foreground">Resolved</p></div>
             </CardContent>
           </Card>
         </div>
@@ -303,13 +198,8 @@ export default function AdminQueries() {
             <CardContent className="flex flex-col items-center justify-center py-12">
               <MessageSquare className="mb-4 h-12 w-12 text-muted-foreground bounce-in" />
               <h3 className="text-lg font-semibold">No queries yet</h3>
-              <p className="mb-4 text-muted-foreground">
-                You haven't submitted any queries yet.
-              </p>
-              <Button onClick={() => setDialogOpen(true)} className="transition-smooth hover:scale-105">
-                <Plus className="mr-2 h-4 w-4" />
-                Submit Query
-              </Button>
+              <p className="mb-4 text-muted-foreground">You haven't submitted any queries yet.</p>
+              <Button onClick={() => setDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Submit Query</Button>
             </CardContent>
           </Card>
         ) : (
@@ -324,22 +214,19 @@ export default function AdminQueries() {
                         <Badge variant="outline">{categoryLabels[query.category]}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">{query.description}</p>
+                      {/* Show admin response to student */}
+                      {query.is_resolved && query.resolution_comment && (
+                        <div className="rounded-lg border border-success/30 bg-success/5 p-3 mt-2">
+                          <p className="text-xs font-medium text-success mb-1">Admin Response</p>
+                          <p className="text-sm">{query.resolution_comment}</p>
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground">
                         Submitted {format(parseISO(query.created_at), "MMM d, yyyy 'at' h:mm a")}
                       </p>
                     </div>
                     <Badge className={query.is_resolved ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}>
-                      {query.is_resolved ? (
-                        <>
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          Resolved
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="mr-1 h-3 w-3" />
-                          Open
-                        </>
-                      )}
+                      {query.is_resolved ? <><CheckCircle className="mr-1 h-3 w-3" /> Resolved</> : <><Clock className="mr-1 h-3 w-3" /> Open</>}
                     </Badge>
                   </div>
                 </CardContent>

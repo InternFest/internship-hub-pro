@@ -365,15 +365,18 @@ export default function AdminProgress() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Completion Rate</CardTitle></CardHeader>
-            <CardContent className="flex justify-center">
+            <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Submitted vs Not Submitted</CardTitle></CardHeader>
+            <CardContent>
               <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie data={completionData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                    {completionData.map((_, i) => <Cell key={i} fill={i === 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-                </PieChart>
+                <BarChart data={completionData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} formatter={(value: number) => [value, "Students"]} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {completionData.map((entry, i) => <Cell key={i} fill={i === 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"} />)}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>

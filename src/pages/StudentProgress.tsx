@@ -204,7 +204,7 @@ export default function StudentProgress() {
             <CardContent className="flex justify-center">
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
-                  <Pie data={timelinessData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  <Pie data={timelinessData.filter(d => d.value > 0)} cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
                     <Cell fill="hsl(var(--success))" />
                     <Cell fill="hsl(var(--warning))" />
                   </Pie>
@@ -227,7 +227,7 @@ export default function StudentProgress() {
                       { name: "Missed", value: missedAssignments > 0 ? missedAssignments : 0 },
                     ]}
                     cx="50%" cy="50%" innerRadius={60} outerRadius={100} dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, value }) => `${name}: ${value}`}
                   >
                     <Cell fill="hsl(var(--success))" />
                     <Cell fill="hsl(var(--destructive))" />
