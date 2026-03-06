@@ -283,28 +283,34 @@ export default function Dashboard() {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="card-hover slide-up stagger-1">
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            <Card className="card-3d slide-up stagger-1 overflow-hidden relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Student ID
                 </CardTitle>
-                <GraduationCap className="h-4 w-4 text-primary" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                  <GraduationCap className="h-4 w-4 text-primary" />
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-primary">{studentStats.studentId || "N/A"}</p>
+                <p className="text-xl font-bold text-primary md:text-2xl">{studentStats.studentId || "N/A"}</p>
                 {studentStats.batchName && (
                   <p className="text-xs text-muted-foreground">{studentStats.batchName}</p>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="card-hover slide-up stagger-2">
+            <Card className="card-3d slide-up stagger-2 overflow-hidden relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Diary Entries
                 </CardTitle>
-                <BookOpen className="h-4 w-4 text-accent" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
+                  <BookOpen className="h-4 w-4 text-accent" />
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{studentStats.diaryEntries}</p>
@@ -312,12 +318,15 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover slide-up stagger-3">
+            <Card className="card-3d slide-up stagger-3 overflow-hidden relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Projects
                 </CardTitle>
-                <FolderKanban className="h-4 w-4 text-success" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success/10">
+                  <FolderKanban className="h-4 w-4 text-success" />
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{studentStats.projects}</p>
@@ -325,12 +334,15 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card className="card-hover slide-up stagger-4">
+            <Card className="card-3d slide-up stagger-4 overflow-hidden relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-warning/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   Leave Requests
                 </CardTitle>
-                <CalendarOff className="h-4 w-4 text-warning" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10">
+                  <CalendarOff className="h-4 w-4 text-warning" />
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{studentStats.leaves}</p>
