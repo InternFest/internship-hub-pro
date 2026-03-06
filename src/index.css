@@ -246,6 +246,25 @@
   .focus-ring {
     @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
   }
+
+  /* Safe area for mobile bottom nav */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* 3D card tilt on hover */
+  .card-3d {
+    perspective: 1000px;
+    @apply transition-transform duration-300;
+  }
+  .card-3d:hover {
+    transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateY(-4px);
+  }
+
+  /* Glassmorphism card */
+  .glass-card {
+    @apply bg-card/70 backdrop-blur-xl border border-border/50 shadow-lg;
+  }
 }
 
 @keyframes fadeIn {

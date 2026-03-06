@@ -218,12 +218,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r bg-card md:flex">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r bg-card/95 backdrop-blur-xl md:flex">
         <div className="flex h-16 items-center gap-2 border-b px-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary shadow-md">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold">FEST Interns</span>
+          <span className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">FEST Interns</span>
         </div>
         <div className="flex-1 overflow-y-auto"><NavContent /></div>
         <div className="border-t p-3">
