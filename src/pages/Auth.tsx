@@ -289,7 +289,7 @@ export default function Auth() {
               </CardTitle>
               <CardDescription>
                 {mode === "forgot"
-                  ? "Enter your email to receive a reset link"
+                  ? "Enter your email and set a new password"
                   : mode === "login"
                   ? "Sign in to access your internship portal"
                   : "Register to start your internship journey"}
@@ -300,12 +300,15 @@ export default function Auth() {
           <CardContent>
             {mode === "forgot" ? (
               forgotSent ? (
-                <div className="space-y-4 text-center">
+                <div className="space-y-4 text-center fade-in">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10 bounce-in">
+                    <CheckCircle className="h-8 w-8 text-success" />
+                  </div>
                   <p className="text-sm text-muted-foreground">
-                    A password reset link has been sent to <strong>{forgotEmail}</strong>. Please check your inbox and follow the instructions.
+                    Password for <strong>{forgotEmail}</strong> has been updated successfully!
                   </p>
-                  <Link to="/auth?mode=login" className="text-sm font-medium text-primary hover:underline">
-                    Back to Login
+                  <Link to="/auth?mode=login" className="inline-block">
+                    <Button className="w-full">Go to Login</Button>
                   </Link>
                 </div>
               ) : (
@@ -326,11 +329,52 @@ export default function Auth() {
                     )}
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-password">New Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="forgot-password"
+                        type={showForgotPassword ? "text" : "password"}
+                        placeholder="********"
+                        value={forgotPassword}
+                        onChange={(e) => setForgotPassword(e.target.value)}
+                        disabled={isLoading}
+                        className={errors.forgotPassword ? "border-destructive" : ""}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowForgotPassword(!showForgotPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        {showForgotPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {errors.forgotPassword && (
+                      <p className="text-xs text-destructive">{errors.forgotPassword}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-confirm-password">Re-Enter New Password</Label>
+                    <Input
+                      id="forgot-confirm-password"
+                      type="password"
+                      placeholder="********"
+                      value={forgotConfirmPassword}
+                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
+                      disabled={isLoading}
+                      className={errors.forgotConfirmPassword ? "border-destructive" : ""}
+                    />
+                    {errors.forgotConfirmPassword && (
+                      <p className="text-xs text-destructive">{errors.forgotConfirmPassword}</p>
+                    )}
+                  </div>
+
                   <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                     {isLoading ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...</>
                     ) : (
-                      "Send Reset Link"
+                      "Reset Password"
                     )}
                   </Button>
 
