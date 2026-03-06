@@ -360,30 +360,38 @@ export default function Dashboard() {
             <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <a
                 href="/diary"
-                className="flex items-center gap-3 rounded-lg border p-4 transition-smooth hover:bg-accent hover:scale-[1.02] hover:shadow-md active-press"
+                className="flex items-center gap-3 rounded-xl border p-4 transition-all duration-200 hover:bg-primary/5 hover:border-primary/30 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] group"
               >
-                <BookOpen className="h-5 w-5 text-primary" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
                 <span className="font-medium">Add Diary Entry</span>
               </a>
               <a
                 href="/projects"
-                className="flex items-center gap-3 rounded-lg border p-4 transition-smooth hover:bg-accent hover:scale-[1.02] hover:shadow-md active-press"
+                className="flex items-center gap-3 rounded-xl border p-4 transition-all duration-200 hover:bg-accent/5 hover:border-accent/30 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] group"
               >
-                <FolderKanban className="h-5 w-5 text-primary" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 group-hover:bg-accent/20 transition-colors">
+                  <FolderKanban className="h-5 w-5 text-accent" />
+                </div>
                 <span className="font-medium">View Projects</span>
               </a>
               <a
                 href="/leaves"
-                className="flex items-center gap-3 rounded-lg border p-4 transition-smooth hover:bg-accent hover:scale-[1.02] hover:shadow-md active-press"
+                className="flex items-center gap-3 rounded-xl border p-4 transition-all duration-200 hover:bg-warning/5 hover:border-warning/30 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] group"
               >
-                <CalendarOff className="h-5 w-5 text-primary" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-warning/10 group-hover:bg-warning/20 transition-colors">
+                  <CalendarOff className="h-5 w-5 text-warning" />
+                </div>
                 <span className="font-medium">Request Leave</span>
               </a>
               <a
                 href="/profile"
-                className="flex items-center gap-3 rounded-lg border p-4 transition-smooth hover:bg-accent hover:scale-[1.02] hover:shadow-md active-press"
+                className="flex items-center gap-3 rounded-xl border p-4 transition-all duration-200 hover:bg-success/5 hover:border-success/30 hover:scale-[1.02] hover:shadow-md active:scale-[0.98] group"
               >
-                <GraduationCap className="h-5 w-5 text-primary" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10 group-hover:bg-success/20 transition-colors">
+                  <GraduationCap className="h-5 w-5 text-success" />
+                </div>
                 <span className="font-medium">Update Profile</span>
               </a>
             </CardContent>
