@@ -61,7 +61,10 @@ export default function Auth() {
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotPassword, setForgotPassword] = useState("");
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // FIX: If authLoading takes more than 8 seconds, stop showing spinner
   useEffect(() => {
@@ -204,17 +207,27 @@ export default function Auth() {
       setErrors({ forgotEmail: "Please enter a valid email address" });
       return;
     }
+    if (!forgotPassword || forgotPassword.length < 6) {
+      setErrors({ forgotPassword: "Password must be at least 6 characters" });
+      return;
+    }
+    if (forgotPassword !== forgotConfirmPassword) {
+      setErrors({ forgotConfirmPassword: "Passwords do not match" });
+      return;
+    }
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const { data, error } = await supabase.functions.invoke("reset-password", {
+        body: { email: forgotEmail, newPassword: forgotPassword },
       });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
       setForgotSent(true);
       toast({
-        title: "Reset Link Sent",
-        description: "Check your email for the password reset link.",
+        title: "Password Updated!",
+        description: "Your password has been reset successfully. You can now login.",
       });
     } catch (err: any) {
       console.error("Reset error:", err);
@@ -223,7 +236,7 @@ export default function Auth() {
         title: "Reset Failed",
         description: isNetworkError(msg)
           ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again."
-          : msg || "Failed to send reset email.",
+          : msg || "Failed to reset password.",
         variant: "destructive",
       });
     } finally {
