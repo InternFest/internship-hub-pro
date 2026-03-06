@@ -156,8 +156,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   );
 
   const MobileBottomNav = () => (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur-lg md:hidden">
-      <nav className="flex items-center justify-around py-2">
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card/95 backdrop-blur-lg md:hidden safe-area-bottom">
+      <nav className="flex items-center justify-around py-1.5">
         {navItems.slice(0, 5).map((item) => {
           const isActive = location.pathname === item.href;
           return (
@@ -165,26 +165,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               key={item.href}
               to={item.disabled ? "#" : item.href}
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 transition-colors",
-                isActive ? "text-primary" : item.disabled ? "text-muted-foreground/40" : "text-muted-foreground"
+                "flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg transition-all duration-200",
+                isActive 
+                  ? "text-primary bg-primary/10 scale-105" 
+                  : item.disabled 
+                    ? "text-muted-foreground/40" 
+                    : "text-muted-foreground active:scale-95"
               )}
             >
-              <item.icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{item.title.split(" ")[0]}</span>
+              <item.icon className={cn("h-5 w-5", isActive && "animate-bounce-subtle")} />
+              <span className="text-[10px] font-medium leading-tight">{item.title.split(" ")[0]}</span>
             </Link>
           );
         })}
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
-            <button className="flex flex-col items-center gap-1 px-3 py-2 text-muted-foreground">
+            <button className="flex flex-col items-center gap-0.5 px-2 py-1.5 text-muted-foreground active:scale-95 transition-transform">
               <Menu className="h-5 w-5" />
-              <span className="text-[10px] font-medium">More</span>
+              <span className="text-[10px] font-medium leading-tight">More</span>
             </button>
           </SheetTrigger>
           <SheetContent side="right" className="w-72 p-0">
             <div className="border-b p-4">
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-10 w-10 ring-2 ring-primary/20">
                   <AvatarImage src={userProfile?.avatar_url || ""} />
                   <AvatarFallback className="bg-primary text-primary-foreground">
                     {getInitials(userProfile?.full_name || user?.user_metadata?.full_name)}
@@ -214,12 +218,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r bg-card md:flex">
+      <aside className="fixed inset-y-0 left-0 z-50 hidden w-64 flex-col border-r bg-card/95 backdrop-blur-xl md:flex">
         <div className="flex h-16 items-center gap-2 border-b px-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary shadow-md">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold">FEST Interns</span>
+          <span className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">FEST Interns</span>
         </div>
         <div className="flex-1 overflow-y-auto"><NavContent /></div>
         <div className="border-t p-3">
