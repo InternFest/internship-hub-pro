@@ -209,8 +209,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <Badge variant="outline" className={cn("mt-0.5 text-xs capitalize",
                     role === "admin" && "border-destructive/50 text-destructive",
                     role === "faculty" && "border-accent/50 text-accent",
-                    role === "student" && "border-primary/50 text-primary"
-                  )}>{role}</Badge>
+                    role === "student" && "border-primary/50 text-primary",
+                    role === "bde" && "border-orange-500/50 text-orange-600"
+                  )}>{role === "bde" ? "BDE" : role}</Badge>
                 </div>
               </div>
             </div>
@@ -251,8 +252,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <Badge variant="outline" className={cn("mt-0.5 text-xs capitalize",
                     role === "admin" && "border-destructive/50 text-destructive",
                     role === "faculty" && "border-accent/50 text-accent",
-                    role === "student" && "border-primary/50 text-primary"
-                  )}>{role}</Badge>
+                    role === "student" && "border-primary/50 text-primary",
+                    role === "bde" && "border-orange-500/50 text-orange-600"
+                  )}>{role === "bde" ? "BDE" : role}</Badge>
                 </div>
               </button>
             </DropdownMenuTrigger>
