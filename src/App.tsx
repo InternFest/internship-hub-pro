@@ -9,6 +9,7 @@ import { LoadingScreen } from "@/components/LoadingScreen";
 // Pages
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import InternalAuth from "./pages/InternalAuth";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
@@ -32,8 +33,13 @@ import AdminResources from "./pages/admin/AdminResources";
 import AdminAssignments from "./pages/admin/AdminAssignments";
 import AdminProgress from "./pages/admin/AdminProgress";
 import AdminCalendar from "./pages/admin/AdminCalendar";
+import AdminUploadLeads from "./pages/admin/AdminUploadLeads";
+import AdminLeadsGenerated from "./pages/admin/AdminLeadsGenerated";
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentProgress from "./pages/StudentProgress";
+import BdeDashboard from "./pages/bde/BdeDashboard";
+import BdeLeadsInfo from "./pages/bde/BdeLeadsInfo";
+import BdeLeadsGenerated from "./pages/bde/BdeLeadsGenerated";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -50,6 +56,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   if (loading) return <LoadingScreen />;
   if (user) {
     if (role === "faculty") return <Navigate to="/students" replace />;
+    if (role === "bde") return <Navigate to="/bde-dashboard" replace />;
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
@@ -59,6 +66,7 @@ function FacultyDashboardRedirect({ children }: { children: React.ReactNode }) {
   const { role, loading } = useAuth();
   if (loading) return <LoadingScreen />;
   if (role === "faculty") return <Navigate to="/students" replace />;
+  if (role === "bde") return <Navigate to="/bde-dashboard" replace />;
   return <>{children}</>;
 }
 
@@ -67,6 +75,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Index />} />
       <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+      <Route path="/internal-auth" element={<InternalAuth />} />
       <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route path="/dashboard" element={<ProtectedRoute><FacultyDashboardRedirect><Dashboard /></FacultyDashboardRedirect></ProtectedRoute>} />
@@ -96,6 +105,13 @@ function AppRoutes() {
       <Route path="/admin-queries" element={<ProtectedRoute><AdminQueriesManagement /></ProtectedRoute>} />
       <Route path="/manage-resources" element={<ProtectedRoute><AdminResources /></ProtectedRoute>} />
       <Route path="/manage-assignments" element={<ProtectedRoute><AdminAssignments /></ProtectedRoute>} />
+      <Route path="/upload-leads" element={<ProtectedRoute><AdminUploadLeads /></ProtectedRoute>} />
+      <Route path="/admin-leads-generated" element={<ProtectedRoute><AdminLeadsGenerated /></ProtectedRoute>} />
+
+      {/* BDE routes */}
+      <Route path="/bde-dashboard" element={<ProtectedRoute><BdeDashboard /></ProtectedRoute>} />
+      <Route path="/bde-leads-info" element={<ProtectedRoute><BdeLeadsInfo /></ProtectedRoute>} />
+      <Route path="/bde-leads-generated" element={<ProtectedRoute><BdeLeadsGenerated /></ProtectedRoute>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

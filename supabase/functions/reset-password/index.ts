@@ -60,10 +60,11 @@ Deno.serve(async (req) => {
       JSON.stringify({ success: true, message: "Password updated successfully" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Reset password error:", error);
+    const message = error instanceof Error ? error.message : "Failed to reset password";
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to reset password" }),
+      JSON.stringify({ error: message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

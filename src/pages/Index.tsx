@@ -519,6 +519,9 @@ export default function Index() {
                 <a href="/about" className="text-muted-foreground hover:text-primary transition-colors">
                   About
                 </a>
+                <Link to="/internal-auth?mode=login" className="text-muted-foreground hover:text-primary transition-colors">
+                  Festiva Interns
+                </Link>
               </div>
             </div>
           </div>
