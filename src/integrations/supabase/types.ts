@@ -275,6 +275,63 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          assigned_bde_id: string | null
+          branch: string | null
+          college_name: string | null
+          course_interested: string | null
+          created_at: string
+          created_by: string
+          email: string | null
+          id: string
+          lead_type: string
+          name: string
+          phone: string | null
+          reminder_date: string | null
+          semester: string | null
+          status: string
+          updated_at: string
+          year: string | null
+        }
+        Insert: {
+          assigned_bde_id?: string | null
+          branch?: string | null
+          college_name?: string | null
+          course_interested?: string | null
+          created_at?: string
+          created_by: string
+          email?: string | null
+          id?: string
+          lead_type?: string
+          name: string
+          phone?: string | null
+          reminder_date?: string | null
+          semester?: string | null
+          status?: string
+          updated_at?: string
+          year?: string | null
+        }
+        Update: {
+          assigned_bde_id?: string | null
+          branch?: string | null
+          college_name?: string | null
+          course_interested?: string | null
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          id?: string
+          lead_type?: string
+          name?: string
+          phone?: string | null
+          reminder_date?: string | null
+          semester?: string | null
+          status?: string
+          updated_at?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
       leave_requests: {
         Row: {
           created_at: string
@@ -559,6 +616,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          requested_role: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requested_role: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requested_role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
