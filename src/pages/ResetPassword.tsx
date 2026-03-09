@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { GraduationCap, Loader2, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -19,20 +18,31 @@ export default function ResetPassword() {
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isRecovery, setIsRecovery] = useState(false);
+  const [checking, setChecking] = useState(true); // ✅ prevent flash of "invalid link"
 
   useEffect(() => {
-    // Listen for the SIGNED_IN event with recovery type
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setIsRecovery(true);
-      }
-    });
-
-    // Check URL hash for recovery token
+    // Check URL hash immediately
     const hash = window.location.hash;
     if (hash.includes("type=recovery")) {
       setIsRecovery(true);
+      setChecking(false);
     }
+
+    // Check if there's already an active session (token already exchanged)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsRecovery(true);
+      }
+      setChecking(false);
+    });
+
+    // Listen for auth events — catches PASSWORD_RECOVERY even if fired before mount
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
+        setIsRecovery(true);
+        setChecking(false);
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -57,8 +67,7 @@ export default function ResetPassword() {
 
       setSuccess(true);
       toast({ title: "Password Updated", description: "You can now sign in with your new password." });
-      
-      // Sign out and redirect
+
       await supabase.auth.signOut();
       setTimeout(() => navigate("/auth?mode=login"), 2000);
     } catch (err: any) {
@@ -67,6 +76,15 @@ export default function ResetPassword() {
       setIsLoading(false);
     }
   };
+
+  // ✅ Show nothing while we check session — avoids flash of "invalid link"
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!isRecovery && !success) {
     return (
