@@ -33,13 +33,20 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Find user by email
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    // Find user by email with higher perPage limit
+    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+      perPage: 1000,  // ✅ was defaulting to 50, user wasn't being found
+    });
     if (listError) throw listError;
+
+    console.log("Total users fetched:", users.users.length);
+    console.log("Looking for email:", email.toLowerCase());
 
     const user = users.users.find(
       (u) => u.email?.toLowerCase() === email.toLowerCase()
     );
+
+    console.log("User found:", user ? user.id : "NOT FOUND");
 
     if (!user) {
       return new Response(
