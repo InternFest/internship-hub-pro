@@ -14,7 +14,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   GraduationCap, LayoutDashboard, User, BookOpen, FolderKanban, CalendarOff,
   MessageSquare, Users, Settings, LogOut, Menu, ChevronRight, Shield, UserCog,
-  Library, ClipboardList, TrendingUp, Calendar,
+  Library, ClipboardList, TrendingUp, Calendar, Briefcase, Upload, FileSearch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +65,15 @@ const adminNavItems: NavItem[] = [
   { title: "Diaries", href: "/view-diaries", icon: BookOpen },
   { title: "Leaves", href: "/view-leaves", icon: CalendarOff },
   { title: "Queries", href: "/admin-queries", icon: MessageSquare },
+  { title: "Upload Leads", href: "/upload-leads", icon: Upload },
+  { title: "Leads Generated", href: "/admin-leads-generated", icon: FileSearch },
+];
+
+const bdeNavItems: NavItem[] = [
+  { title: "Dashboard", href: "/bde-dashboard", icon: LayoutDashboard },
+  { title: "Profile", href: "/profile", icon: User },
+  { title: "Leads Info", href: "/bde-leads-info", icon: Users },
+  { title: "Leads Generated", href: "/bde-leads-generated", icon: Briefcase },
 ];
 
 interface DashboardLayoutProps {
@@ -97,6 +106,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const getNavItems = (): NavItem[] => {
     if (role === "admin") return adminNavItems;
     if (role === "faculty") return facultyNavItems;
+    if (role === "bde") return bdeNavItems;
     if (role === "student") {
       return studentNavItems.map((item) => {
         if (studentStatus !== "approved" && !["Dashboard", "Profile"].includes(item.title)) {
