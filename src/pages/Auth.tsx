@@ -27,7 +27,6 @@ const registerSchema = z.object({
   path: ["confirmPassword"],
 });
 
-// Helper to detect network errors
 const isNetworkError = (msg: string) =>
   msg.includes("Failed to fetch") ||
   msg.includes("NetworkError") ||
@@ -44,7 +43,6 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  // FIX: Track if auth check timed out so we don't show infinite spinner
   const [authTimedOut, setAuthTimedOut] = useState(false);
 
   // Login form state
@@ -61,24 +59,16 @@ export default function Auth() {
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotPassword, setForgotPassword] = useState("");
-  const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
-  // FIX: If authLoading takes more than 8 seconds, stop showing spinner
   useEffect(() => {
     if (!authLoading) return;
-    const timeout = setTimeout(() => {
-      setAuthTimedOut(true);
-    }, 8000);
+    const timeout = setTimeout(() => setAuthTimedOut(true), 8000);
     return () => clearTimeout(timeout);
   }, [authLoading]);
 
   useEffect(() => {
-    if (!authLoading && user) {
-      navigate("/dashboard");
-    }
+    if (!authLoading && user) navigate("/dashboard");
   }, [user, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -101,40 +91,23 @@ export default function Auth() {
     setIsLoading(true);
     try {
       const { error } = await signIn(loginEmail, loginPassword);
-
-      // FIX: Actually handle the returned error instead of ignoring it
       if (error) {
         const msg = error.message || "";
         if (isNetworkError(msg)) {
-          toast({
-            title: "Network Error",
-            description: "Unable to reach the server. Please switch to mobile data or use a VPN (e.g. Cloudflare WARP) and try again.",
-            variant: "destructive",
-          });
+          toast({ title: "Network Error", description: "Unable to reach the server. Please switch to mobile data or use a VPN (e.g. Cloudflare WARP) and try again.", variant: "destructive" });
         } else if (msg.includes("Invalid login credentials")) {
-          toast({
-            title: "Login Failed",
-            description: "Invalid email or password. Please try again.",
-            variant: "destructive",
-          });
+          toast({ title: "Login Failed", description: "Invalid email or password. Please try again.", variant: "destructive" });
         } else {
-          toast({
-            title: "Login Failed",
-            description: msg || "An unexpected error occurred.",
-            variant: "destructive",
-          });
+          toast({ title: "Login Failed", description: msg || "An unexpected error occurred.", variant: "destructive" });
         }
       } else {
         navigate("/dashboard");
       }
     } catch (err: any) {
-      console.error("Login error:", err);
       const msg = err?.message || "";
       toast({
         title: isNetworkError(msg) ? "Network Error" : "Login Failed",
-        description: isNetworkError(msg)
-          ? "Unable to reach the server. Please switch to mobile data or use a VPN (e.g. Cloudflare WARP) and try again."
-          : msg || "An unexpected error occurred.",
+        description: isNetworkError(msg) ? "Unable to reach the server. Please switch to mobile data or use a VPN (e.g. Cloudflare WARP) and try again." : msg || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
@@ -161,37 +134,23 @@ export default function Auth() {
 
     setIsLoading(true);
     try {
-      const { error } = await signUp(email, password, {
-        full_name: fullName,
-        phone,
-        date_of_birth: dateOfBirth,
-      });
-
-      // FIX: Handle returned error
+      const { error } = await signUp(email, password, { full_name: fullName, phone, date_of_birth: dateOfBirth });
       if (error) {
         const msg = error.message || "";
         toast({
           title: isNetworkError(msg) ? "Network Error" : "Registration Failed",
-          description: isNetworkError(msg)
-            ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again."
-            : msg || "An unexpected error occurred.",
+          description: isNetworkError(msg) ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again." : msg || "An unexpected error occurred.",
           variant: "destructive",
         });
       } else {
-        toast({
-          title: "Account Created!",
-          description: "You can now sign in with your credentials.",
-        });
+        toast({ title: "Account Created!", description: "You can now sign in with your credentials." });
         navigate("/auth?mode=login");
       }
     } catch (err: any) {
-      console.error("Register error:", err);
       const msg = err?.message || "";
       toast({
         title: isNetworkError(msg) ? "Network Error" : "Registration Failed",
-        description: isNetworkError(msg)
-          ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again."
-          : msg || "An unexpected error occurred.",
+        description: isNetworkError(msg) ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again." : msg || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
@@ -207,36 +166,26 @@ export default function Auth() {
       setErrors({ forgotEmail: "Please enter a valid email address" });
       return;
     }
-    if (!forgotPassword || forgotPassword.length < 6) {
-      setErrors({ forgotPassword: "Password must be at least 6 characters" });
-      return;
-    }
-    if (forgotPassword !== forgotConfirmPassword) {
-      setErrors({ forgotConfirmPassword: "Passwords do not match" });
-      return;
-    }
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("reset-password", {
-        body: { email: forgotEmail, newPassword: forgotPassword },
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: "https://www.interns.festivamoments.co.in/reset-password",
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      
+
       setForgotSent(true);
       toast({
-        title: "Password Updated!",
-        description: "Your password has been reset successfully. You can now login.",
+        title: "Reset Email Sent!",
+        description: "Check your inbox and click the link to reset your password.",
       });
     } catch (err: any) {
-      console.error("Reset error:", err);
       const msg = err?.message || "";
       toast({
         title: "Reset Failed",
         description: isNetworkError(msg)
           ? "Unable to reach the server. Please switch to mobile data or use a VPN and try again."
-          : msg || "Failed to reset password.",
+          : msg || "Failed to send reset email.",
         variant: "destructive",
       });
     } finally {
@@ -244,7 +193,6 @@ export default function Auth() {
     }
   };
 
-  // FIX: Show login page after timeout instead of infinite spinner
   if (authLoading && !authTimedOut) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -259,22 +207,15 @@ export default function Auth() {
       <div className="absolute -left-40 bottom-0 h-80 w-80 rounded-full bg-accent/10 blur-3xl" />
 
       <div className="container relative flex min-h-screen flex-col items-center justify-center py-8">
-        <Link
-          to="/"
-          className="absolute left-4 top-4 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground md:left-8 md:top-8"
-        >
+        <Link to="/" className="absolute left-4 top-4 flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground md:left-8 md:top-8">
           <ArrowLeft className="h-4 w-4" />
           Back to home
         </Link>
 
-        {/* FIX: Show network warning banner when auth timed out */}
         {authTimedOut && (
           <div className="mb-4 w-full max-w-md rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800 flex items-center gap-2">
             <WifiOff className="h-4 w-4 shrink-0" />
-            <span>
-              Network issue detected. If login fails, please switch to <strong>mobile data</strong> or use{" "}
-              <strong>Cloudflare WARP</strong> (free VPN).
-            </span>
+            <span>Network issue detected. If login fails, please switch to <strong>mobile data</strong> or use <strong>Cloudflare WARP</strong> (free VPN).</span>
           </div>
         )}
 
@@ -289,7 +230,7 @@ export default function Auth() {
               </CardTitle>
               <CardDescription>
                 {mode === "forgot"
-                  ? "Enter your email and set a new password"
+                  ? "Enter your email to receive a reset link"
                   : mode === "login"
                   ? "Sign in to access your internship portal"
                   : "Register to start your internship journey"}
@@ -305,10 +246,10 @@ export default function Auth() {
                     <CheckCircle className="h-8 w-8 text-success" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Password for <strong>{forgotEmail}</strong> has been updated successfully!
+                    A password reset link has been sent to <strong>{forgotEmail}</strong>. Check your inbox and click the link to set a new password.
                   </p>
-                  <Link to="/auth?mode=login" className="inline-block">
-                    <Button className="w-full">Go to Login</Button>
+                  <Link to="/auth?mode=login" className="inline-block w-full">
+                    <Button className="w-full">Back to Login</Button>
                   </Link>
                 </div>
               ) : (
@@ -324,65 +265,16 @@ export default function Auth() {
                       disabled={isLoading}
                       className={errors.forgotEmail ? "border-destructive" : ""}
                     />
-                    {errors.forgotEmail && (
-                      <p className="text-xs text-destructive">{errors.forgotEmail}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="forgot-password">New Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="forgot-password"
-                        type={showForgotPassword ? "text" : "password"}
-                        placeholder="********"
-                        value={forgotPassword}
-                        onChange={(e) => setForgotPassword(e.target.value)}
-                        disabled={isLoading}
-                        className={errors.forgotPassword ? "border-destructive" : ""}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowForgotPassword(!showForgotPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showForgotPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {errors.forgotPassword && (
-                      <p className="text-xs text-destructive">{errors.forgotPassword}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="forgot-confirm-password">Re-Enter New Password</Label>
-                    <Input
-                      id="forgot-confirm-password"
-                      type="password"
-                      placeholder="********"
-                      value={forgotConfirmPassword}
-                      onChange={(e) => setForgotConfirmPassword(e.target.value)}
-                      disabled={isLoading}
-                      className={errors.forgotConfirmPassword ? "border-destructive" : ""}
-                    />
-                    {errors.forgotConfirmPassword && (
-                      <p className="text-xs text-destructive">{errors.forgotConfirmPassword}</p>
-                    )}
+                    {errors.forgotEmail && <p className="text-xs text-destructive">{errors.forgotEmail}</p>}
                   </div>
 
                   <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                    {isLoading ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...</>
-                    ) : (
-                      "Reset Password"
-                    )}
+                    {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : "Send Reset Link"}
                   </Button>
 
                   <p className="text-center text-sm text-muted-foreground">
                     Remember your password?{" "}
-                    <Link to="/auth?mode=login" className="font-medium text-primary hover:underline">
-                      Sign in
-                    </Link>
+                    <Link to="/auth?mode=login" className="font-medium text-primary hover:underline">Sign in</Link>
                   </p>
                 </form>
               )
@@ -390,35 +282,15 @@ export default function Auth() {
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    disabled={isLoading}
-                    className={errors.email ? "border-destructive" : ""}
-                  />
+                  <Input id="login-email" type="email" placeholder="you@example.com" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} disabled={isLoading} className={errors.email ? "border-destructive" : ""} />
                   {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
                   <div className="relative">
-                    <Input
-                      id="login-password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="********"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      disabled={isLoading}
-                      className={errors.password ? "border-destructive" : ""}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
+                    <Input id="login-password" type={showPassword ? "text" : "password"} placeholder="********" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} disabled={isLoading} className={errors.password ? "border-destructive" : ""} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
@@ -426,24 +298,16 @@ export default function Auth() {
                 </div>
 
                 <div className="text-right">
-                  <Link to="/auth?mode=forgot" className="text-sm text-primary hover:underline">
-                    Forgot Password?
-                  </Link>
+                  <Link to="/auth?mode=forgot" className="text-sm text-primary hover:underline">Forgot Password?</Link>
                 </div>
 
                 <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</>
-                  ) : (
-                    "Sign In"
-                  )}
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...</> : "Sign In"}
                 </Button>
 
                 <p className="text-center text-sm text-muted-foreground">
                   Don't have an account?{" "}
-                  <Link to="/auth?mode=register" className="font-medium text-primary hover:underline">
-                    Register
-                  </Link>
+                  <Link to="/auth?mode=register" className="font-medium text-primary hover:underline">Register</Link>
                 </p>
               </form>
             ) : (
@@ -490,18 +354,12 @@ export default function Auth() {
                 </div>
 
                 <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-                  {isLoading ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...</>
-                  ) : (
-                    "Create Account"
-                  )}
+                  {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating account...</> : "Create Account"}
                 </Button>
 
                 <p className="text-center text-sm text-muted-foreground">
                   Already have an account?{" "}
-                  <Link to="/auth?mode=login" className="font-medium text-primary hover:underline">
-                    Sign in
-                  </Link>
+                  <Link to="/auth?mode=login" className="font-medium text-primary hover:underline">Sign in</Link>
                 </p>
               </form>
             )}
