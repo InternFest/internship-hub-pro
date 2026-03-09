@@ -3,7 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-type AppRole = "student" | "faculty" | "admin";
+type AppRole = "student" | "faculty" | "admin" | "bde";
 type StudentStatus = "pending" | "approved" | "rejected";
 
 interface AuthContextType {
