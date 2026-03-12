@@ -140,7 +140,7 @@ export default function AdminAssignments() {
   const resetForm = () => {
     setBatchId(""); setAssignmentNumber("1"); setTitle(""); setDescription("");
     setLinks(""); setStartDate(new Date().toISOString().split("T")[0]); setDeadline("");
-    setPdfFiles(null); setEditMode(false); setEditingAssignment(null);
+    setDeadlineTime("23:59"); setPdfFiles(null); setEditMode(false); setEditingAssignment(null);
     setAllowPdf(true); setAllowLink(false); setAllowText(false); setAllowImage(false);
   };
 
