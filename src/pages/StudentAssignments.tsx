@@ -304,7 +304,7 @@ export default function StudentAssignments() {
                   </div>
                   <div className="rounded-lg bg-muted/50 p-3">
                     <p className="text-muted-foreground">Deadline</p>
-                    <p className="font-medium">{format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}</p>
+                    <p className="font-medium">{format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}{(selectedAssignment as any).deadline_time ? ` at ${(selectedAssignment as any).deadline_time}` : ""}</p>
                   </div>
                 </div>
 
