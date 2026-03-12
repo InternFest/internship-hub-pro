@@ -251,7 +251,7 @@ export default function StudentAssignments() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {assignments.map((assignment) => {
               const subs = getSubmissions(assignment.id);
-              const deadlinePassed = isDeadlinePassed(assignment.deadline);
+              const deadlinePassed = isDeadlinePassed(assignment.deadline, (assignment as any).deadline_time);
               return (
                 <Card
                   key={assignment.id}
