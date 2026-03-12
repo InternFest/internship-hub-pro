@@ -201,6 +201,7 @@ export default function AdminAssignments() {
         links: links ? `${links}${submissionTypes ? `|types:${submissionTypes}` : ""}` : (submissionTypes ? `|types:${submissionTypes}` : null),
         start_date: startDate,
         deadline,
+        deadline_time: deadlineTime || "23:59",
       };
 
       if (editMode && editingAssignment) {
