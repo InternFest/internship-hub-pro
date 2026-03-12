@@ -86,7 +86,16 @@ export default function StudentAssignments() {
   const getSubmissions = (assignmentId: string) =>
     submissions.filter((s) => s.assignment_id === assignmentId);
 
-  const isDeadlinePassed = (deadline: string) => new Date(deadline) < new Date();
+  const isDeadlinePassed = (deadline: string, deadlineTime?: string | null) => {
+    const dl = new Date(deadline);
+    if (deadlineTime) {
+      const [hours, minutes] = deadlineTime.split(":").map(Number);
+      dl.setHours(hours, minutes, 59, 999);
+    } else {
+      dl.setHours(23, 59, 59, 999);
+    }
+    return dl < new Date();
+  };
 
   const refreshSubmissions = async () => {
     if (!user) return;
