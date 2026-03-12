@@ -273,7 +273,7 @@ export default function StudentAssignments() {
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
                     <p>Start: {format(new Date(assignment.start_date), "MMM dd, yyyy")}</p>
-                    <p>Deadline: {format(new Date(assignment.deadline), "MMM dd, yyyy")}</p>
+                    <p>Deadline: {format(new Date(assignment.deadline), "MMM dd, yyyy")}{(assignment as any).deadline_time ? ` at ${(assignment as any).deadline_time}` : ""}</p>
                   </CardContent>
                 </Card>
               );
