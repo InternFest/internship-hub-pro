@@ -1,0 +1,1 @@
+ALTER TABLE public.assignments ADD COLUMN deadline_time text DEFAULT NULL;
