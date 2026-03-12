@@ -372,7 +372,7 @@ export default function StudentAssignments() {
                 })()}
 
                 {/* Submission area */}
-                {isDeadlinePassed(selectedAssignment.deadline) ? (
+                {isDeadlinePassed(selectedAssignment.deadline, (selectedAssignment as any).deadline_time) ? (
                   <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
                     <p className="text-sm text-destructive font-medium">Deadline has passed. Submission closed.</p>
                   </div>

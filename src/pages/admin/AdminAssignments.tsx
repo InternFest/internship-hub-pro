@@ -476,7 +476,7 @@ export default function AdminAssignments() {
               <DialogHeader>
                 <DialogTitle>Assignment #{selectedAssignment.assignment_number}: {selectedAssignment.title}</DialogTitle>
                 <DialogDescription>
-                  {selectedAssignment.batches?.name} • Deadline: {format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}
+                  {selectedAssignment.batches?.name} • Deadline: {format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}{(selectedAssignment as any).deadline_time ? ` at ${(selectedAssignment as any).deadline_time}` : ""}
                 </DialogDescription>
               </DialogHeader>
               <Tabs defaultValue="submitted">
