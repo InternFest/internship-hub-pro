@@ -98,6 +98,7 @@ export type Database = {
           created_at: string
           created_by: string
           deadline: string
+          deadline_time: string | null
           description: string | null
           id: string
           links: string | null
@@ -112,6 +113,7 @@ export type Database = {
           created_at?: string
           created_by: string
           deadline: string
+          deadline_time?: string | null
           description?: string | null
           id?: string
           links?: string | null
@@ -126,6 +128,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           deadline?: string
+          deadline_time?: string | null
           description?: string | null
           id?: string
           links?: string | null

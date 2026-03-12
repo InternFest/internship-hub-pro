@@ -90,6 +90,7 @@ export default function AdminAssignments() {
   const [links, setLinks] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [deadline, setDeadline] = useState("");
+  const [deadlineTime, setDeadlineTime] = useState("23:59");
   const [pdfFiles, setPdfFiles] = useState<FileList | null>(null);
 
   // Submission type toggles for assignment creation
@@ -139,7 +140,7 @@ export default function AdminAssignments() {
   const resetForm = () => {
     setBatchId(""); setAssignmentNumber("1"); setTitle(""); setDescription("");
     setLinks(""); setStartDate(new Date().toISOString().split("T")[0]); setDeadline("");
-    setPdfFiles(null); setEditMode(false); setEditingAssignment(null);
+    setDeadlineTime("23:59"); setPdfFiles(null); setEditMode(false); setEditingAssignment(null);
     setAllowPdf(true); setAllowLink(false); setAllowText(false); setAllowImage(false);
   };
 
@@ -153,6 +154,7 @@ export default function AdminAssignments() {
     setLinks(assignment.links || "");
     setStartDate(assignment.start_date);
     setDeadline(assignment.deadline);
+    setDeadlineTime((assignment as any).deadline_time || "23:59");
     setPdfFiles(null);
     setDialogOpen(true);
   };
@@ -199,6 +201,7 @@ export default function AdminAssignments() {
         links: links ? `${links}${submissionTypes ? `|types:${submissionTypes}` : ""}` : (submissionTypes ? `|types:${submissionTypes}` : null),
         start_date: startDate,
         deadline,
+        deadline_time: deadlineTime || "23:59",
       };
 
       if (editMode && editingAssignment) {
@@ -358,6 +361,11 @@ export default function AdminAssignments() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label>Deadline Time *</Label>
+                  <Input type="time" value={deadlineTime} onChange={(e) => setDeadlineTime(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Submissions allowed until this time on the deadline date.</p>
+                </div>
+                <div className="space-y-2">
                   <Label>PDF Attachments {editMode ? "(leave empty to keep current)" : ""}</Label>
                   <Input type="file" accept=".pdf,.doc,.docx" multiple onChange={(e) => setPdfFiles(e.target.files)} />
                   {pdfFiles && Array.from(pdfFiles).map((f, i) => <Badge key={i} variant="outline" className="mr-1">{f.name}</Badge>)}
@@ -438,6 +446,7 @@ export default function AdminAssignments() {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(assignment.start_date), "MMM dd")} – {format(new Date(assignment.deadline), "MMM dd, yyyy")}
+                        {(assignment as any).deadline_time ? ` at ${(assignment as any).deadline_time}` : ""}
                       </p>
                     </div>
                   </div>
@@ -467,7 +476,7 @@ export default function AdminAssignments() {
               <DialogHeader>
                 <DialogTitle>Assignment #{selectedAssignment.assignment_number}: {selectedAssignment.title}</DialogTitle>
                 <DialogDescription>
-                  {selectedAssignment.batches?.name} • Deadline: {format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}
+                  {selectedAssignment.batches?.name} • Deadline: {format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}{(selectedAssignment as any).deadline_time ? ` at ${(selectedAssignment as any).deadline_time}` : ""}
                 </DialogDescription>
               </DialogHeader>
               <Tabs defaultValue="submitted">

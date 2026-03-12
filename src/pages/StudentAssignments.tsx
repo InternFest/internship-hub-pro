@@ -86,7 +86,16 @@ export default function StudentAssignments() {
   const getSubmissions = (assignmentId: string) =>
     submissions.filter((s) => s.assignment_id === assignmentId);
 
-  const isDeadlinePassed = (deadline: string) => new Date(deadline) < new Date();
+  const isDeadlinePassed = (deadline: string, deadlineTime?: string | null) => {
+    const dl = new Date(deadline);
+    if (deadlineTime) {
+      const [hours, minutes] = deadlineTime.split(":").map(Number);
+      dl.setHours(hours, minutes, 59, 999);
+    } else {
+      dl.setHours(23, 59, 59, 999);
+    }
+    return dl < new Date();
+  };
 
   const refreshSubmissions = async () => {
     if (!user) return;
@@ -242,7 +251,7 @@ export default function StudentAssignments() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {assignments.map((assignment) => {
               const subs = getSubmissions(assignment.id);
-              const deadlinePassed = isDeadlinePassed(assignment.deadline);
+              const deadlinePassed = isDeadlinePassed(assignment.deadline, (assignment as any).deadline_time);
               return (
                 <Card
                   key={assignment.id}
@@ -264,7 +273,7 @@ export default function StudentAssignments() {
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
                     <p>Start: {format(new Date(assignment.start_date), "MMM dd, yyyy")}</p>
-                    <p>Deadline: {format(new Date(assignment.deadline), "MMM dd, yyyy")}</p>
+                    <p>Deadline: {format(new Date(assignment.deadline), "MMM dd, yyyy")}{(assignment as any).deadline_time ? ` at ${(assignment as any).deadline_time}` : ""}</p>
                   </CardContent>
                 </Card>
               );
@@ -295,7 +304,7 @@ export default function StudentAssignments() {
                   </div>
                   <div className="rounded-lg bg-muted/50 p-3">
                     <p className="text-muted-foreground">Deadline</p>
-                    <p className="font-medium">{format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}</p>
+                    <p className="font-medium">{format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}{(selectedAssignment as any).deadline_time ? ` at ${(selectedAssignment as any).deadline_time}` : ""}</p>
                   </div>
                 </div>
 
@@ -363,7 +372,7 @@ export default function StudentAssignments() {
                 })()}
 
                 {/* Submission area */}
-                {isDeadlinePassed(selectedAssignment.deadline) ? (
+                {isDeadlinePassed(selectedAssignment.deadline, (selectedAssignment as any).deadline_time) ? (
                   <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
                     <p className="text-sm text-destructive font-medium">Deadline has passed. Submission closed.</p>
                   </div>
