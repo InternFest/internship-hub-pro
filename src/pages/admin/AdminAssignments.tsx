@@ -154,6 +154,7 @@ export default function AdminAssignments() {
     setLinks(assignment.links || "");
     setStartDate(assignment.start_date);
     setDeadline(assignment.deadline);
+    setDeadlineTime((assignment as any).deadline_time || "23:59");
     setPdfFiles(null);
     setDialogOpen(true);
   };
