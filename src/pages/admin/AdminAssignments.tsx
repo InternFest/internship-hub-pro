@@ -90,6 +90,7 @@ export default function AdminAssignments() {
   const [links, setLinks] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [deadline, setDeadline] = useState("");
+  const [deadlineTime, setDeadlineTime] = useState("23:59");
   const [pdfFiles, setPdfFiles] = useState<FileList | null>(null);
 
   // Submission type toggles for assignment creation
