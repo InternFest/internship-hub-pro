@@ -446,6 +446,7 @@ export default function AdminAssignments() {
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(assignment.start_date), "MMM dd")} – {format(new Date(assignment.deadline), "MMM dd, yyyy")}
+                        {(assignment as any).deadline_time ? ` at ${(assignment as any).deadline_time}` : ""}
                       </p>
                     </div>
                   </div>
