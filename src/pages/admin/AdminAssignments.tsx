@@ -361,6 +361,11 @@ export default function AdminAssignments() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label>Deadline Time *</Label>
+                  <Input type="time" value={deadlineTime} onChange={(e) => setDeadlineTime(e.target.value)} />
+                  <p className="text-xs text-muted-foreground">Submissions allowed until this time on the deadline date.</p>
+                </div>
+                <div className="space-y-2">
                   <Label>PDF Attachments {editMode ? "(leave empty to keep current)" : ""}</Label>
                   <Input type="file" accept=".pdf,.doc,.docx" multiple onChange={(e) => setPdfFiles(e.target.files)} />
                   {pdfFiles && Array.from(pdfFiles).map((f, i) => <Badge key={i} variant="outline" className="mr-1">{f.name}</Badge>)}
