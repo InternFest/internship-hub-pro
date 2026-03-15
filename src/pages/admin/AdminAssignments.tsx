@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, ClipboardList, Lock, Users, CheckCircle, XCircle, FileText, Pencil, Trash2, Image, Link2, Type } from "lucide-react";
+import { Loader2, Plus, ClipboardList, Lock, Users, CheckCircle, XCircle, FileText, Pencil, Trash2, Image, Link2, Type, Award } from "lucide-react";
 import { format } from "date-fns";
 
 interface Assignment {
