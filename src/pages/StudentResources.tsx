@@ -105,6 +105,8 @@ export default function StudentResources() {
         return <Badge className="bg-accent/10 text-accent">Text</Badge>;
       case "notes":
         return <Badge className="bg-success/10 text-success">PDF Notes</Badge>;
+      case "external_link":
+        return <Badge className="bg-orange-500/10 text-orange-500">Link</Badge>;
       default:
         return <Badge variant="outline">{type}</Badge>;
     }
