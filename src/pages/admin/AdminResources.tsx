@@ -291,6 +291,7 @@ export default function AdminResources() {
       case "video": return <Badge className="bg-primary/10 text-primary">Video</Badge>;
       case "text": return <Badge className="bg-accent/10 text-accent">Text</Badge>;
       case "notes": return <Badge className="bg-success/10 text-success">PDF</Badge>;
+      case "external_link": return <Badge className="bg-orange-500/10 text-orange-500">Link</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
   };
