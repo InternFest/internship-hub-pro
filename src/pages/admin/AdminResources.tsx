@@ -384,6 +384,14 @@ export default function AdminResources() {
                     <p className="text-xs text-muted-foreground">Supports YouTube, Vimeo, and direct video URLs</p>
                   </div>
                 )}
+                {resourceType === "external_link" && (
+                  <div className="space-y-2">
+                    <Label>External Link URL *</Label>
+                    <Input placeholder="https://github.com/..." value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} className={errors.contentUrl ? "border-destructive" : ""} />
+                    {errors.contentUrl && <p className="text-xs text-destructive">{errors.contentUrl}</p>}
+                    <p className="text-xs text-muted-foreground">GitHub, documentation, or any external link</p>
+                  </div>
+                )}
                 {resourceType === "text" && (
                   <div className="space-y-2">
                     <Label>Text Content *</Label>
