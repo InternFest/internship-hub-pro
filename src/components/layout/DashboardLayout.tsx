@@ -61,6 +61,7 @@ const adminNavItems: NavItem[] = [
   { title: "Check Progress", href: "/check-progress", icon: TrendingUp },
   { title: "Resources", href: "/manage-resources", icon: Library },
   { title: "Assignments", href: "/manage-assignments", icon: ClipboardList },
+  { title: "Quizzes", href: "/manage-quizzes", icon: FileQuestion },
   { title: "Calendar", href: "/manage-calendar", icon: Calendar },
   { title: "Projects", href: "/view-projects", icon: FolderKanban },
   { title: "Faculty", href: "/faculty", icon: UserCog },
@@ -68,6 +69,7 @@ const adminNavItems: NavItem[] = [
   { title: "Diaries", href: "/view-diaries", icon: BookOpen },
   { title: "Leaves", href: "/view-leaves", icon: CalendarOff },
   { title: "Queries", href: "/admin-queries", icon: MessageSquare },
+  { title: "Session Feedbacks", href: "/admin-feedbacks", icon: Star },
   { title: "Upload Leads", href: "/upload-leads", icon: Upload },
   { title: "Leads Generated", href: "/admin-leads-generated", icon: FileSearch },
 ];
