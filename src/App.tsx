@@ -113,6 +113,8 @@ function AppRoutes() {
       <Route path="/manage-assignments" element={<ProtectedRoute><AdminAssignments /></ProtectedRoute>} />
       <Route path="/upload-leads" element={<ProtectedRoute><AdminUploadLeads /></ProtectedRoute>} />
       <Route path="/admin-leads-generated" element={<ProtectedRoute><AdminLeadsGenerated /></ProtectedRoute>} />
+      <Route path="/manage-quizzes" element={<ProtectedRoute><AdminQuizzes /></ProtectedRoute>} />
+      <Route path="/admin-feedbacks" element={<ProtectedRoute><AdminSessionFeedbacks /></ProtectedRoute>} />
 
       {/* BDE routes */}
       <Route path="/bde-dashboard" element={<ProtectedRoute><BdeDashboard /></ProtectedRoute>} />
