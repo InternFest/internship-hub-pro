@@ -90,7 +90,7 @@ export default function AdminResources() {
   const [moduleNumber, setModuleNumber] = useState("1");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [resourceType, setResourceType] = useState<"video" | "text" | "notes">("video");
+  const [resourceType, setResourceType] = useState<"video" | "text" | "notes" | "external_link">("video");
   const [contentUrl, setContentUrl] = useState("");
   const [contentText, setContentText] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
