@@ -180,7 +180,7 @@ export default function AdminResources() {
       resourceSchema.parse({
         batchId, moduleNumber, title, description,
         resourceType,
-        contentUrl: resourceType === "video" ? contentUrl : "",
+        contentUrl: (resourceType === "video" || resourceType === "external_link") ? contentUrl : "",
         contentText: resourceType === "text" ? contentText : "",
       });
     } catch (error) {
