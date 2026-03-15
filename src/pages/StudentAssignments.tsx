@@ -75,6 +75,22 @@ export default function StudentAssignments() {
           .eq("student_id", user.id);
 
         setSubmissions((subsData || []) as Submission[]);
+
+        // Fetch grades
+        const assignmentIds = (assignmentsData || []).map((a: any) => a.id);
+        if (assignmentIds.length > 0) {
+          const { data: gradesData } = await supabase
+            .from("assignment_grades")
+            .select("*")
+            .eq("student_id", user.id)
+            .in("assignment_id", assignmentIds);
+
+          const gradesMap: Record<string, { grade_attained: number; total_grade: number; comments: string | null }> = {};
+          (gradesData || []).forEach((g: any) => {
+            gradesMap[g.assignment_id] = { grade_attained: g.grade_attained, total_grade: g.total_grade, comments: g.comments };
+          });
+          setGrades(gradesMap);
+        }
       } catch (error) {
         console.error("Error fetching assignments:", error);
       } finally {
