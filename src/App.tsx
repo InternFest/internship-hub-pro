@@ -37,9 +37,13 @@ import AdminUploadLeads from "./pages/admin/AdminUploadLeads";
 import AdminLeadsGenerated from "./pages/admin/AdminLeadsGenerated";
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentProgress from "./pages/StudentProgress";
+import StudentQuizzes from "./pages/StudentQuizzes";
+import SessionFeedback from "./pages/SessionFeedback";
 import BdeDashboard from "./pages/bde/BdeDashboard";
 import BdeLeadsInfo from "./pages/bde/BdeLeadsInfo";
 import BdeLeadsGenerated from "./pages/bde/BdeLeadsGenerated";
+import AdminQuizzes from "./pages/admin/AdminQuizzes";
+import AdminSessionFeedbacks from "./pages/admin/AdminSessionFeedbacks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
