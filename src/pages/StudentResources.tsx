@@ -30,7 +30,7 @@ interface Resource {
   module_number: number;
   title: string;
   description: string | null;
-  resource_type: "video" | "text" | "notes";
+  resource_type: "video" | "text" | "notes" | "external_link";
   content_url: string | null;
   content_text: string | null;
   pdf_url: string | null;
@@ -90,6 +90,8 @@ export default function StudentResources() {
         return <FileText className="h-5 w-5 text-accent" />;
       case "notes":
         return <File className="h-5 w-5 text-success" />;
+      case "external_link":
+        return <ExternalLink className="h-5 w-5 text-orange-500" />;
       default:
         return <BookOpen className="h-5 w-5" />;
     }
@@ -103,6 +105,8 @@ export default function StudentResources() {
         return <Badge className="bg-accent/10 text-accent">Text</Badge>;
       case "notes":
         return <Badge className="bg-success/10 text-success">PDF Notes</Badge>;
+      case "external_link":
+        return <Badge className="bg-orange-500/10 text-orange-500">Link</Badge>;
       default:
         return <Badge variant="outline">{type}</Badge>;
     }
@@ -110,16 +114,16 @@ export default function StudentResources() {
 
   const handleResourceClick = async (resource: Resource) => {
     if (resource.resource_type === "video" && resource.content_url) {
-      // Open video in dialog or new tab
       setSelectedResource(resource);
       setDialogOpen(true);
     } else if (resource.resource_type === "text") {
       setSelectedResource(resource);
       setDialogOpen(true);
     } else if (resource.resource_type === "notes" && resource.pdf_url) {
-      // Open PDF in dialog for viewing
       setSelectedResource(resource);
       setDialogOpen(true);
+    } else if (resource.resource_type === "external_link" && resource.content_url) {
+      window.open(resource.content_url, "_blank");
     }
   };
 

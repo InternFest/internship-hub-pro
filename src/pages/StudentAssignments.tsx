@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardList, Upload, Lock, FileText, ExternalLink, Loader2, CheckCircle, Link2, Type, Image, Trash2 } from "lucide-react";
+import { ClipboardList, Upload, Lock, FileText, ExternalLink, Loader2, CheckCircle, Link2, Type, Image, Trash2, Award } from "lucide-react";
 import { format } from "date-fns";
 
 interface Assignment {
@@ -48,6 +48,7 @@ export default function StudentAssignments() {
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [grades, setGrades] = useState<Record<string, { grade_attained: number; total_grade: number; comments: string | null }>>({});
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -74,6 +75,22 @@ export default function StudentAssignments() {
           .eq("student_id", user.id);
 
         setSubmissions((subsData || []) as Submission[]);
+
+        // Fetch grades
+        const assignmentIds = (assignmentsData || []).map((a: any) => a.id);
+        if (assignmentIds.length > 0) {
+          const { data: gradesData } = await supabase
+            .from("assignment_grades")
+            .select("*")
+            .eq("student_id", user.id)
+            .in("assignment_id", assignmentIds);
+
+          const gradesMap: Record<string, { grade_attained: number; total_grade: number; comments: string | null }> = {};
+          (gradesData || []).forEach((g: any) => {
+            gradesMap[g.assignment_id] = { grade_attained: g.grade_attained, total_grade: g.total_grade, comments: g.comments };
+          });
+          setGrades(gradesMap);
+        }
       } catch (error) {
         console.error("Error fetching assignments:", error);
       } finally {
@@ -274,6 +291,12 @@ export default function StudentAssignments() {
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
                     <p>Start: {format(new Date(assignment.start_date), "MMM dd, yyyy")}</p>
                     <p>Deadline: {format(new Date(assignment.deadline), "MMM dd, yyyy")}{(assignment as any).deadline_time ? ` at ${(assignment as any).deadline_time}` : ""}</p>
+                    {grades[assignment.id] && (
+                      <div className="flex items-center gap-1 text-primary font-medium">
+                        <Award className="h-3 w-3" />
+                        Grade: {grades[assignment.id].grade_attained}/{grades[assignment.id].total_grade}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -306,7 +329,20 @@ export default function StudentAssignments() {
                     <p className="text-muted-foreground">Deadline</p>
                     <p className="font-medium">{format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}{(selectedAssignment as any).deadline_time ? ` at ${(selectedAssignment as any).deadline_time}` : ""}</p>
                   </div>
-                </div>
+                  </div>
+
+                {/* Grade display */}
+                {grades[selectedAssignment.id] && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Award className="h-5 w-5 text-primary" />
+                      <p className="font-semibold text-primary">Grade: {grades[selectedAssignment.id].grade_attained} / {grades[selectedAssignment.id].total_grade}</p>
+                    </div>
+                    {grades[selectedAssignment.id].comments && (
+                      <p className="text-sm text-muted-foreground">💬 {grades[selectedAssignment.id].comments}</p>
+                    )}
+                  </div>
+                )}
 
                 {selectedAssignment.links && (() => {
                   const linksStr = selectedAssignment.links.split("|")[0];

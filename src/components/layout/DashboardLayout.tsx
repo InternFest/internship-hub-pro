@@ -15,6 +15,7 @@ import {
   GraduationCap, LayoutDashboard, User, BookOpen, FolderKanban, CalendarOff,
   MessageSquare, Users, Settings, LogOut, Menu, ChevronRight, Shield, UserCog,
   Library, ClipboardList, TrendingUp, Calendar, Briefcase, Upload, FileSearch,
+  Star, FileQuestion,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,9 +33,11 @@ const studentNavItems: NavItem[] = [
   { title: "My Progress", href: "/my-progress", icon: TrendingUp },
   { title: "Resources", href: "/resources", icon: Library },
   { title: "Assignments", href: "/assignments", icon: ClipboardList },
+  { title: "Quizzes", href: "/quizzes", icon: FileQuestion },
   { title: "Calendar", href: "/calendar", icon: Calendar },
   { title: "Internship Diary", href: "/diary", icon: BookOpen },
   { title: "Projects", href: "/projects", icon: FolderKanban },
+  { title: "Session Feedback", href: "/session-feedback", icon: Star },
   { title: "Leave Requests", href: "/leaves", icon: CalendarOff },
   { title: "Write to Admin", href: "/queries", icon: MessageSquare },
 ];
@@ -43,11 +46,13 @@ const facultyNavItems: NavItem[] = [
   { title: "Students", href: "/students", icon: Users },
   { title: "Resources", href: "/manage-resources", icon: Library },
   { title: "Assignments", href: "/manage-assignments", icon: ClipboardList },
+  { title: "Quizzes", href: "/manage-quizzes", icon: FileQuestion },
   { title: "Calendar", href: "/manage-calendar", icon: Calendar },
   { title: "Check Progress", href: "/check-progress", icon: TrendingUp },
   { title: "Internship Diaries", href: "/view-diaries", icon: BookOpen },
   { title: "Projects", href: "/view-projects", icon: FolderKanban },
   { title: "Student Leaves", href: "/view-leaves", icon: CalendarOff },
+  { title: "Session Feedbacks", href: "/admin-feedbacks", icon: Star },
   { title: "My Leave Requests", href: "/faculty-leaves", icon: CalendarOff },
 ];
 
@@ -58,6 +63,7 @@ const adminNavItems: NavItem[] = [
   { title: "Check Progress", href: "/check-progress", icon: TrendingUp },
   { title: "Resources", href: "/manage-resources", icon: Library },
   { title: "Assignments", href: "/manage-assignments", icon: ClipboardList },
+  { title: "Quizzes", href: "/manage-quizzes", icon: FileQuestion },
   { title: "Calendar", href: "/manage-calendar", icon: Calendar },
   { title: "Projects", href: "/view-projects", icon: FolderKanban },
   { title: "Faculty", href: "/faculty", icon: UserCog },
@@ -65,6 +71,7 @@ const adminNavItems: NavItem[] = [
   { title: "Diaries", href: "/view-diaries", icon: BookOpen },
   { title: "Leaves", href: "/view-leaves", icon: CalendarOff },
   { title: "Queries", href: "/admin-queries", icon: MessageSquare },
+  { title: "Session Feedbacks", href: "/admin-feedbacks", icon: Star },
   { title: "Upload Leads", href: "/upload-leads", icon: Upload },
   { title: "Leads Generated", href: "/admin-leads-generated", icon: FileSearch },
 ];
@@ -72,6 +79,7 @@ const adminNavItems: NavItem[] = [
 const bdeNavItems: NavItem[] = [
   { title: "Dashboard", href: "/bde-dashboard", icon: LayoutDashboard },
   { title: "Profile", href: "/profile", icon: User },
+  { title: "Students", href: "/students", icon: Users },
   { title: "Leads Info", href: "/bde-leads-info", icon: Users },
   { title: "Leads Generated", href: "/bde-leads-generated", icon: Briefcase },
 ];

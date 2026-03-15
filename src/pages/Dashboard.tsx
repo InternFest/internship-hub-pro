@@ -251,6 +251,28 @@ export default function Dashboard() {
     return (
       <DashboardLayout>
         <div className="space-y-6">
+          {/* Weekly Feedback Reminder */}
+          {(() => {
+            const now = new Date();
+            const start = new Date(now.getFullYear(), 0, 1);
+            const currentWeek = Math.ceil((now.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+            return (
+              <Card className="border-warning/20 bg-warning/5 fade-in">
+                <CardContent className="flex items-start gap-4 p-5">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-warning/10">
+                    <AlertCircle className="h-5 w-5 text-warning" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-warning mb-1">📝 Weekly Session Feedback</p>
+                    <p className="text-sm text-muted-foreground">
+                      Don't forget to submit your <a href="/session-feedback" className="font-medium text-warning underline underline-offset-2 hover:text-warning/80">weekly session feedback</a> (Week {currentWeek}). This is mandatory every week.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {/* Important Notice */}
           <Card className="border-primary/20 bg-primary/5 fade-in">
             <CardContent className="flex items-start gap-4 p-5">

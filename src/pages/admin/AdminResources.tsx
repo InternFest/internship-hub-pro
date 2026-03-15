@@ -52,7 +52,7 @@ interface Resource {
   module_number: number;
   title: string;
   description: string | null;
-  resource_type: "video" | "text" | "notes";
+  resource_type: "video" | "text" | "notes" | "external_link";
   content_url: string | null;
   content_text: string | null;
   pdf_url: string | null;
@@ -90,7 +90,7 @@ export default function AdminResources() {
   const [moduleNumber, setModuleNumber] = useState("1");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [resourceType, setResourceType] = useState<"video" | "text" | "notes">("video");
+  const [resourceType, setResourceType] = useState<"video" | "text" | "notes" | "external_link">("video");
   const [contentUrl, setContentUrl] = useState("");
   const [contentText, setContentText] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
@@ -180,7 +180,7 @@ export default function AdminResources() {
       resourceSchema.parse({
         batchId, moduleNumber, title, description,
         resourceType,
-        contentUrl: resourceType === "video" ? contentUrl : "",
+        contentUrl: (resourceType === "video" || resourceType === "external_link") ? contentUrl : "",
         contentText: resourceType === "text" ? contentText : "",
       });
     } catch (error) {
@@ -195,6 +195,7 @@ export default function AdminResources() {
     }
 
     if (resourceType === "video" && !contentUrl) { setErrors({ contentUrl: "Video URL is required" }); return; }
+    if (resourceType === "external_link" && !contentUrl) { setErrors({ contentUrl: "External link URL is required" }); return; }
     if (resourceType === "text" && !contentText) { setErrors({ contentText: "Text content is required" }); return; }
     if (resourceType === "notes" && !pdfFile && !editMode) { setErrors({ pdfFile: "PDF file is required" }); return; }
 
@@ -219,7 +220,7 @@ export default function AdminResources() {
           title,
           description: description || null,
           resource_type: resourceType,
-          content_url: resourceType === "video" ? contentUrl : null,
+          content_url: (resourceType === "video" || resourceType === "external_link") ? contentUrl : null,
           content_text: resourceType === "text" ? contentText : null,
           pdf_url: resourceType === "notes" ? pdfUrl : null,
         }).eq("id", editingResource.id);
@@ -232,9 +233,9 @@ export default function AdminResources() {
           title,
           description: description || null,
           resource_type: resourceType,
-          content_url: resourceType === "video" ? contentUrl : null,
+          content_url: (resourceType === "video" || resourceType === "external_link") ? contentUrl : null,
           content_text: resourceType === "text" ? contentText : null,
-          pdf_url: pdfUrl,
+          pdf_url: resourceType === "notes" ? pdfUrl : null,
           created_by: user.id,
         });
         if (error) throw error;
@@ -280,6 +281,7 @@ export default function AdminResources() {
       case "video": return <Video className="h-4 w-4 text-primary" />;
       case "text": return <FileText className="h-4 w-4 text-accent" />;
       case "notes": return <File className="h-4 w-4 text-success" />;
+      case "external_link": return <ExternalLink className="h-4 w-4 text-orange-500" />;
       default: return <BookOpen className="h-4 w-4" />;
     }
   };
@@ -289,6 +291,7 @@ export default function AdminResources() {
       case "video": return <Badge className="bg-primary/10 text-primary">Video</Badge>;
       case "text": return <Badge className="bg-accent/10 text-accent">Text</Badge>;
       case "notes": return <Badge className="bg-success/10 text-success">PDF</Badge>;
+      case "external_link": return <Badge className="bg-orange-500/10 text-orange-500">Link</Badge>;
       default: return <Badge variant="outline">{type}</Badge>;
     }
   };
@@ -363,12 +366,13 @@ export default function AdminResources() {
                 </div>
                 <div className="space-y-2">
                   <Label>Resource Type *</Label>
-                  <Select value={resourceType} onValueChange={(v) => setResourceType(v as "video" | "text" | "notes")}>
+                  <Select value={resourceType} onValueChange={(v) => setResourceType(v as "video" | "text" | "notes" | "external_link")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="video"><div className="flex items-center gap-2"><Video className="h-4 w-4" /> Video / Video URL</div></SelectItem>
                       <SelectItem value="text"><div className="flex items-center gap-2"><FileText className="h-4 w-4" /> Text Content</div></SelectItem>
                       <SelectItem value="notes"><div className="flex items-center gap-2"><File className="h-4 w-4" /> Notes (PDF)</div></SelectItem>
+                      <SelectItem value="external_link"><div className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> External Link</div></SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -378,6 +382,14 @@ export default function AdminResources() {
                     <Input placeholder="https://youtube.com/watch?v=..." value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} className={errors.contentUrl ? "border-destructive" : ""} />
                     {errors.contentUrl && <p className="text-xs text-destructive">{errors.contentUrl}</p>}
                     <p className="text-xs text-muted-foreground">Supports YouTube, Vimeo, and direct video URLs</p>
+                  </div>
+                )}
+                {resourceType === "external_link" && (
+                  <div className="space-y-2">
+                    <Label>External Link URL *</Label>
+                    <Input placeholder="https://github.com/..." value={contentUrl} onChange={(e) => setContentUrl(e.target.value)} className={errors.contentUrl ? "border-destructive" : ""} />
+                    {errors.contentUrl && <p className="text-xs text-destructive">{errors.contentUrl}</p>}
+                    <p className="text-xs text-muted-foreground">GitHub, documentation, or any external link</p>
                   </div>
                 )}
                 {resourceType === "text" && (
@@ -451,6 +463,15 @@ export default function AdminResources() {
               <div>
                 <p className="text-2xl font-bold">{resources.filter((r) => r.resource_type === "notes").length}</p>
                 <p className="text-sm text-muted-foreground">PDF Notes</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="card-hover slide-up stagger-4">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-500/10"><ExternalLink className="h-6 w-6 text-orange-500" /></div>
+              <div>
+                <p className="text-2xl font-bold">{resources.filter((r) => r.resource_type === "external_link").length}</p>
+                <p className="text-sm text-muted-foreground">External Links</p>
               </div>
             </CardContent>
           </Card>
@@ -566,6 +587,15 @@ export default function AdminResources() {
                 <RichTextContent content={selectedResource.content_text} />
               </div>
             </ScrollArea>
+          )}
+          {selectedResource?.resource_type === "external_link" && selectedResource.content_url && (
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <ExternalLink className="h-16 w-16 text-orange-500" />
+              <p className="text-muted-foreground text-center">Click below to open this external link.</p>
+              <Button onClick={() => window.open(selectedResource.content_url!, "_blank")}>
+                <ExternalLink className="mr-2 h-4 w-4" /> Open Link
+              </Button>
+            </div>
           )}
           {selectedResource?.resource_type === "notes" && selectedResource.pdf_url && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">

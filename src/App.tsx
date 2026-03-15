@@ -37,9 +37,13 @@ import AdminUploadLeads from "./pages/admin/AdminUploadLeads";
 import AdminLeadsGenerated from "./pages/admin/AdminLeadsGenerated";
 import StudentAssignments from "./pages/StudentAssignments";
 import StudentProgress from "./pages/StudentProgress";
+import StudentQuizzes from "./pages/StudentQuizzes";
+import SessionFeedback from "./pages/SessionFeedback";
 import BdeDashboard from "./pages/bde/BdeDashboard";
 import BdeLeadsInfo from "./pages/bde/BdeLeadsInfo";
 import BdeLeadsGenerated from "./pages/bde/BdeLeadsGenerated";
+import AdminQuizzes from "./pages/admin/AdminQuizzes";
+import AdminSessionFeedbacks from "./pages/admin/AdminSessionFeedbacks";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -88,6 +92,8 @@ function AppRoutes() {
       <Route path="/approvals" element={<ProtectedRoute><Approvals /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><StudentCalendar /></ProtectedRoute>} />
       <Route path="/assignments" element={<ProtectedRoute><StudentAssignments /></ProtectedRoute>} />
+      <Route path="/quizzes" element={<ProtectedRoute><StudentQuizzes /></ProtectedRoute>} />
+      <Route path="/session-feedback" element={<ProtectedRoute><SessionFeedback /></ProtectedRoute>} />
       <Route path="/my-progress" element={<ProtectedRoute><StudentProgress /></ProtectedRoute>} />
 
       {/* Shared admin/faculty routes */}
@@ -107,6 +113,8 @@ function AppRoutes() {
       <Route path="/manage-assignments" element={<ProtectedRoute><AdminAssignments /></ProtectedRoute>} />
       <Route path="/upload-leads" element={<ProtectedRoute><AdminUploadLeads /></ProtectedRoute>} />
       <Route path="/admin-leads-generated" element={<ProtectedRoute><AdminLeadsGenerated /></ProtectedRoute>} />
+      <Route path="/manage-quizzes" element={<ProtectedRoute><AdminQuizzes /></ProtectedRoute>} />
+      <Route path="/admin-feedbacks" element={<ProtectedRoute><AdminSessionFeedbacks /></ProtectedRoute>} />
 
       {/* BDE routes */}
       <Route path="/bde-dashboard" element={<ProtectedRoute><BdeDashboard /></ProtectedRoute>} />

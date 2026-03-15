@@ -125,7 +125,7 @@ export const resourceSchema = z.object({
     .min(3, "Title must be at least 3 characters")
     .max(100, "Title must be less than 100 characters"),
   description: optionalTextSchema,
-  resourceType: z.enum(["video", "text", "notes"], {
+  resourceType: z.enum(["video", "text", "notes", "external_link"], {
     required_error: "Please select a resource type",
   }),
   contentUrl: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
