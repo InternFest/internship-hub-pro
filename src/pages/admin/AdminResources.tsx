@@ -579,6 +579,15 @@ export default function AdminResources() {
               </div>
             </ScrollArea>
           )}
+          {selectedResource?.resource_type === "external_link" && selectedResource.content_url && (
+            <div className="flex flex-col items-center justify-center py-8 space-y-4">
+              <ExternalLink className="h-16 w-16 text-orange-500" />
+              <p className="text-muted-foreground text-center">Click below to open this external link.</p>
+              <Button onClick={() => window.open(selectedResource.content_url!, "_blank")}>
+                <ExternalLink className="mr-2 h-4 w-4" /> Open Link
+              </Button>
+            </div>
+          )}
           {selectedResource?.resource_type === "notes" && selectedResource.pdf_url && (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
               <File className="h-16 w-16 text-success" />
