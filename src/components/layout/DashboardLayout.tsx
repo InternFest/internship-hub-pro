@@ -46,11 +46,13 @@ const facultyNavItems: NavItem[] = [
   { title: "Students", href: "/students", icon: Users },
   { title: "Resources", href: "/manage-resources", icon: Library },
   { title: "Assignments", href: "/manage-assignments", icon: ClipboardList },
+  { title: "Quizzes", href: "/manage-quizzes", icon: FileQuestion },
   { title: "Calendar", href: "/manage-calendar", icon: Calendar },
   { title: "Check Progress", href: "/check-progress", icon: TrendingUp },
   { title: "Internship Diaries", href: "/view-diaries", icon: BookOpen },
   { title: "Projects", href: "/view-projects", icon: FolderKanban },
   { title: "Student Leaves", href: "/view-leaves", icon: CalendarOff },
+  { title: "Session Feedbacks", href: "/admin-feedbacks", icon: Star },
   { title: "My Leave Requests", href: "/faculty-leaves", icon: CalendarOff },
 ];
 
