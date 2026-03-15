@@ -77,6 +77,7 @@ const adminNavItems: NavItem[] = [
 const bdeNavItems: NavItem[] = [
   { title: "Dashboard", href: "/bde-dashboard", icon: LayoutDashboard },
   { title: "Profile", href: "/profile", icon: User },
+  { title: "Students", href: "/students", icon: Users },
   { title: "Leads Info", href: "/bde-leads-info", icon: Users },
   { title: "Leads Generated", href: "/bde-leads-generated", icon: Briefcase },
 ];
