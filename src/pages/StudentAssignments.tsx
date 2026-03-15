@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { SkeletonTable } from "@/components/SkeletonCard";
 import { useToast } from "@/hooks/use-toast";
-import { ClipboardList, Upload, Lock, FileText, ExternalLink, Loader2, CheckCircle, Link2, Type, Image, Trash2 } from "lucide-react";
+import { ClipboardList, Upload, Lock, FileText, ExternalLink, Loader2, CheckCircle, Link2, Type, Image, Trash2, Award } from "lucide-react";
 import { format } from "date-fns";
 
 interface Assignment {
