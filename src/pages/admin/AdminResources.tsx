@@ -281,6 +281,7 @@ export default function AdminResources() {
       case "video": return <Video className="h-4 w-4 text-primary" />;
       case "text": return <FileText className="h-4 w-4 text-accent" />;
       case "notes": return <File className="h-4 w-4 text-success" />;
+      case "external_link": return <ExternalLink className="h-4 w-4 text-orange-500" />;
       default: return <BookOpen className="h-4 w-4" />;
     }
   };
