@@ -366,12 +366,13 @@ export default function AdminResources() {
                 </div>
                 <div className="space-y-2">
                   <Label>Resource Type *</Label>
-                  <Select value={resourceType} onValueChange={(v) => setResourceType(v as "video" | "text" | "notes")}>
+                  <Select value={resourceType} onValueChange={(v) => setResourceType(v as "video" | "text" | "notes" | "external_link")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="video"><div className="flex items-center gap-2"><Video className="h-4 w-4" /> Video / Video URL</div></SelectItem>
                       <SelectItem value="text"><div className="flex items-center gap-2"><FileText className="h-4 w-4" /> Text Content</div></SelectItem>
                       <SelectItem value="notes"><div className="flex items-center gap-2"><File className="h-4 w-4" /> Notes (PDF)</div></SelectItem>
+                      <SelectItem value="external_link"><div className="flex items-center gap-2"><ExternalLink className="h-4 w-4" /> External Link</div></SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
