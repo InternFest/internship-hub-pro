@@ -33,9 +33,11 @@ const studentNavItems: NavItem[] = [
   { title: "My Progress", href: "/my-progress", icon: TrendingUp },
   { title: "Resources", href: "/resources", icon: Library },
   { title: "Assignments", href: "/assignments", icon: ClipboardList },
+  { title: "Quizzes", href: "/quizzes", icon: FileQuestion },
   { title: "Calendar", href: "/calendar", icon: Calendar },
   { title: "Internship Diary", href: "/diary", icon: BookOpen },
   { title: "Projects", href: "/projects", icon: FolderKanban },
+  { title: "Session Feedback", href: "/session-feedback", icon: Star },
   { title: "Leave Requests", href: "/leaves", icon: CalendarOff },
   { title: "Write to Admin", href: "/queries", icon: MessageSquare },
 ];
