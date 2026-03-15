@@ -90,6 +90,8 @@ export default function StudentResources() {
         return <FileText className="h-5 w-5 text-accent" />;
       case "notes":
         return <File className="h-5 w-5 text-success" />;
+      case "external_link":
+        return <ExternalLink className="h-5 w-5 text-orange-500" />;
       default:
         return <BookOpen className="h-5 w-5" />;
     }
