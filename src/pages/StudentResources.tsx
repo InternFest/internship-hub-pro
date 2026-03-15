@@ -114,16 +114,16 @@ export default function StudentResources() {
 
   const handleResourceClick = async (resource: Resource) => {
     if (resource.resource_type === "video" && resource.content_url) {
-      // Open video in dialog or new tab
       setSelectedResource(resource);
       setDialogOpen(true);
     } else if (resource.resource_type === "text") {
       setSelectedResource(resource);
       setDialogOpen(true);
     } else if (resource.resource_type === "notes" && resource.pdf_url) {
-      // Open PDF in dialog for viewing
       setSelectedResource(resource);
       setDialogOpen(true);
+    } else if (resource.resource_type === "external_link" && resource.content_url) {
+      window.open(resource.content_url, "_blank");
     }
   };
 
