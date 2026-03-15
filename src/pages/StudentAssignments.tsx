@@ -329,7 +329,20 @@ export default function StudentAssignments() {
                     <p className="text-muted-foreground">Deadline</p>
                     <p className="font-medium">{format(new Date(selectedAssignment.deadline), "MMM dd, yyyy")}{(selectedAssignment as any).deadline_time ? ` at ${(selectedAssignment as any).deadline_time}` : ""}</p>
                   </div>
-                </div>
+                  </div>
+
+                {/* Grade display */}
+                {grades[selectedAssignment.id] && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Award className="h-5 w-5 text-primary" />
+                      <p className="font-semibold text-primary">Grade: {grades[selectedAssignment.id].grade_attained} / {grades[selectedAssignment.id].total_grade}</p>
+                    </div>
+                    {grades[selectedAssignment.id].comments && (
+                      <p className="text-sm text-muted-foreground">💬 {grades[selectedAssignment.id].comments}</p>
+                    )}
+                  </div>
+                )}
 
                 {selectedAssignment.links && (() => {
                   const linksStr = selectedAssignment.links.split("|")[0];
