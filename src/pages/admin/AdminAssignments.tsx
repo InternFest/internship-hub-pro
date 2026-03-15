@@ -267,7 +267,17 @@ export default function AdminAssignments() {
       if (!studentProfiles || studentProfiles.length === 0) { setBatchStudents([]); return; }
 
       const userIds = studentProfiles.map((s) => s.user_id);
-      const { data: profilesData } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
+      const [{ data: profilesData }, { data: gradesData }] = await Promise.all([
+        supabase.from("profiles").select("id, full_name, email").in("id", userIds),
+        supabase.from("assignment_grades").select("*").eq("assignment_id", assignment.id),
+      ]);
+
+      // Build grades map
+      const gradesMap: Record<string, { grade_attained: number; total_grade: number; comments: string | null }> = {};
+      (gradesData || []).forEach((g: any) => {
+        gradesMap[g.student_id] = { grade_attained: g.grade_attained, total_grade: g.total_grade, comments: g.comments };
+      });
+      setGrades(gradesMap);
 
       const merged: StudentInfo[] = studentProfiles.map((sp) => {
         const profile = profilesData?.find((p) => p.id === sp.user_id);
