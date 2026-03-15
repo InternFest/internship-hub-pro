@@ -506,15 +506,76 @@ export default function AdminAssignments() {
                   ) : (
                     submittedStudents.map((student) => {
                       const studentSubs = submissions.filter((s) => s.student_id === student.user_id);
+                      const grade = grades[student.user_id];
                       return (
                         <div key={student.user_id} className="rounded-lg border p-3 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-sm">{student.profiles?.full_name}</p>
-                              <p className="text-xs text-muted-foreground">{student.student_id} • {studentSubs.length} submission(s)</p>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
+                              <div>
+                                <p className="font-medium text-sm">{student.profiles?.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{student.student_id} • {studentSubs.length} submission(s)</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {grade ? (
+                                <Badge className="bg-primary/10 text-primary">{grade.grade_attained}/{grade.total_grade}</Badge>
+                              ) : (
+                                <Button variant="outline" size="sm" onClick={() => { setGradingStudent(student.user_id); setGradeAttained(""); setTotalGrade("100"); setGradeComments(""); }}>
+                                  <Award className="mr-1 h-3 w-3" /> Grade
+                                </Button>
+                              )}
                             </div>
                           </div>
+                          {/* Grading form */}
+                          {gradingStudent === student.user_id && (
+                            <div className="rounded-lg bg-muted/50 p-3 space-y-2 mt-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Grade Attained *</Label>
+                                  <Input type="number" min="0" value={gradeAttained} onChange={(e) => setGradeAttained(e.target.value)} placeholder="0" className="h-8" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Total Grade *</Label>
+                                  <Input type="number" min="1" value={totalGrade} onChange={(e) => setTotalGrade(e.target.value)} placeholder="100" className="h-8" />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Comments (optional)</Label>
+                                <Input value={gradeComments} onChange={(e) => setGradeComments(e.target.value)} placeholder="Feedback..." className="h-8" />
+                              </div>
+                              <div className="flex gap-2">
+                                <Button size="sm" disabled={savingGrade} onClick={async () => {
+                                  if (!gradeAttained || !totalGrade || !user || !selectedAssignment) return;
+                                  setSavingGrade(true);
+                                  try {
+                                    const { error } = await supabase.from("assignment_grades").upsert({
+                                      assignment_id: selectedAssignment.id,
+                                      student_id: student.user_id,
+                                      grade_attained: parseFloat(gradeAttained),
+                                      total_grade: parseFloat(totalGrade),
+                                      comments: gradeComments || null,
+                                      graded_by: user.id,
+                                    }, { onConflict: "assignment_id,student_id" });
+                                    if (error) throw error;
+                                    setGrades({ ...grades, [student.user_id]: { grade_attained: parseFloat(gradeAttained), total_grade: parseFloat(totalGrade), comments: gradeComments || null } });
+                                    setGradingStudent(null);
+                                    toast({ title: "Graded", description: `Grade saved for ${student.profiles?.full_name}.` });
+                                  } catch (error: any) {
+                                    toast({ title: "Error", description: error.message, variant: "destructive" });
+                                  } finally {
+                                    setSavingGrade(false);
+                                  }
+                                }}>
+                                  {savingGrade ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setGradingStudent(null)}>Cancel</Button>
+                              </div>
+                            </div>
+                          )}
+                          {grade && grade.comments && (
+                            <p className="text-xs text-muted-foreground pl-6">💬 {grade.comments}</p>
+                          )}
                           {studentSubs.map((sub) => (
                             <div key={sub.id} className="flex items-center justify-between pl-6 text-xs border-t pt-1">
                               <div className="flex items-center gap-2">
