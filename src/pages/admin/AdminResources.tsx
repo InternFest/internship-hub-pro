@@ -195,6 +195,7 @@ export default function AdminResources() {
     }
 
     if (resourceType === "video" && !contentUrl) { setErrors({ contentUrl: "Video URL is required" }); return; }
+    if (resourceType === "external_link" && !contentUrl) { setErrors({ contentUrl: "External link URL is required" }); return; }
     if (resourceType === "text" && !contentText) { setErrors({ contentText: "Text content is required" }); return; }
     if (resourceType === "notes" && !pdfFile && !editMode) { setErrors({ pdfFile: "PDF file is required" }); return; }
 
