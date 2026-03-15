@@ -15,6 +15,7 @@ import {
   GraduationCap, LayoutDashboard, User, BookOpen, FolderKanban, CalendarOff,
   MessageSquare, Users, Settings, LogOut, Menu, ChevronRight, Shield, UserCog,
   Library, ClipboardList, TrendingUp, Calendar, Briefcase, Upload, FileSearch,
+  Star, FileQuestion,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
