@@ -233,9 +233,9 @@ export default function AdminResources() {
           title,
           description: description || null,
           resource_type: resourceType,
-          content_url: resourceType === "video" ? contentUrl : null,
+          content_url: (resourceType === "video" || resourceType === "external_link") ? contentUrl : null,
           content_text: resourceType === "text" ? contentText : null,
-          pdf_url: pdfUrl,
+          pdf_url: resourceType === "notes" ? pdfUrl : null,
           created_by: user.id,
         });
         if (error) throw error;
