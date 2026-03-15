@@ -92,6 +92,8 @@ function AppRoutes() {
       <Route path="/approvals" element={<ProtectedRoute><Approvals /></ProtectedRoute>} />
       <Route path="/calendar" element={<ProtectedRoute><StudentCalendar /></ProtectedRoute>} />
       <Route path="/assignments" element={<ProtectedRoute><StudentAssignments /></ProtectedRoute>} />
+      <Route path="/quizzes" element={<ProtectedRoute><StudentQuizzes /></ProtectedRoute>} />
+      <Route path="/session-feedback" element={<ProtectedRoute><SessionFeedback /></ProtectedRoute>} />
       <Route path="/my-progress" element={<ProtectedRoute><StudentProgress /></ProtectedRoute>} />
 
       {/* Shared admin/faculty routes */}
