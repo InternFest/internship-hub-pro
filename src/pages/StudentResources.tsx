@@ -30,7 +30,7 @@ interface Resource {
   module_number: number;
   title: string;
   description: string | null;
-  resource_type: "video" | "text" | "notes";
+  resource_type: "video" | "text" | "notes" | "external_link";
   content_url: string | null;
   content_text: string | null;
   pdf_url: string | null;
