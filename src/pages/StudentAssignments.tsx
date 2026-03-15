@@ -291,6 +291,12 @@ export default function StudentAssignments() {
                   <CardContent className="space-y-2 text-sm text-muted-foreground">
                     <p>Start: {format(new Date(assignment.start_date), "MMM dd, yyyy")}</p>
                     <p>Deadline: {format(new Date(assignment.deadline), "MMM dd, yyyy")}{(assignment as any).deadline_time ? ` at ${(assignment as any).deadline_time}` : ""}</p>
+                    {grades[assignment.id] && (
+                      <div className="flex items-center gap-1 text-primary font-medium">
+                        <Award className="h-3 w-3" />
+                        Grade: {grades[assignment.id].grade_attained}/{grades[assignment.id].total_grade}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
