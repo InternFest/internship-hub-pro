@@ -466,6 +466,15 @@ export default function AdminResources() {
               </div>
             </CardContent>
           </Card>
+          <Card className="card-hover slide-up stagger-4">
+            <CardContent className="flex items-center gap-4 pt-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-500/10"><ExternalLink className="h-6 w-6 text-orange-500" /></div>
+              <div>
+                <p className="text-2xl font-bold">{resources.filter((r) => r.resource_type === "external_link").length}</p>
+                <p className="text-sm text-muted-foreground">External Links</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Resources List */}
