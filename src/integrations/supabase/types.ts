@@ -50,6 +50,50 @@ export type Database = {
         }
         Relationships: []
       }
+      assignment_grades: {
+        Row: {
+          assignment_id: string
+          comments: string | null
+          created_at: string
+          grade_attained: number
+          graded_by: string
+          id: string
+          student_id: string
+          total_grade: number
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          comments?: string | null
+          created_at?: string
+          grade_attained?: number
+          graded_by: string
+          id?: string
+          student_id: string
+          total_grade?: number
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          comments?: string | null
+          created_at?: string
+          grade_attained?: number
+          graded_by?: string
+          id?: string
+          student_id?: string
+          total_grade?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_grades_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_submissions: {
         Row: {
           assignment_id: string
@@ -510,6 +554,171 @@ export type Database = {
         }
         Relationships: []
       }
+      quiz_answers: {
+        Row: {
+          answer_text: string | null
+          id: string
+          is_correct: boolean | null
+          points_awarded: number | null
+          question_id: string
+          submission_id: string
+        }
+        Insert: {
+          answer_text?: string | null
+          id?: string
+          is_correct?: boolean | null
+          points_awarded?: number | null
+          question_id: string
+          submission_id: string
+        }
+        Update: {
+          answer_text?: string | null
+          id?: string
+          is_correct?: boolean | null
+          points_awarded?: number | null
+          question_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quiz_answers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "quiz_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_questions: {
+        Row: {
+          correct_answer: string | null
+          id: string
+          options: Json | null
+          order_number: number
+          points: number
+          question_text: string
+          question_type: string
+          quiz_id: string
+        }
+        Insert: {
+          correct_answer?: string | null
+          id?: string
+          options?: Json | null
+          order_number?: number
+          points?: number
+          question_text: string
+          question_type?: string
+          quiz_id: string
+        }
+        Update: {
+          correct_answer?: string | null
+          id?: string
+          options?: Json | null
+          order_number?: number
+          points?: number
+          question_text?: string
+          question_type?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_submissions: {
+        Row: {
+          id: string
+          is_graded: boolean
+          quiz_id: string
+          score: number | null
+          student_id: string
+          submitted_at: string
+          total_points: number | null
+        }
+        Insert: {
+          id?: string
+          is_graded?: boolean
+          quiz_id: string
+          score?: number | null
+          student_id: string
+          submitted_at?: string
+          total_points?: number | null
+        }
+        Update: {
+          id?: string
+          is_graded?: boolean
+          quiz_id?: string
+          score?: number | null
+          student_id?: string
+          submitted_at?: string
+          total_points?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_submissions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          batch_id: string
+          created_at: string
+          created_by: string
+          deadline: string
+          deadline_time: string | null
+          description: string | null
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          created_by: string
+          deadline: string
+          deadline_time?: string | null
+          description?: string | null
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          created_by?: string
+          deadline?: string
+          deadline_time?: string | null
+          description?: string | null
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       resources: {
         Row: {
           batch_id: string
@@ -556,6 +765,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "resources_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_feedbacks: {
+        Row: {
+          batch_id: string | null
+          comments: string | null
+          content_coverage_rating: number
+          content_explanation_rating: number
+          created_at: string
+          id: string
+          improvements: string | null
+          issues: string | null
+          session_rating: number
+          topics_covered: string
+          user_id: string
+          week_number: number
+        }
+        Insert: {
+          batch_id?: string | null
+          comments?: string | null
+          content_coverage_rating: number
+          content_explanation_rating: number
+          created_at?: string
+          id?: string
+          improvements?: string | null
+          issues?: string | null
+          session_rating: number
+          topics_covered: string
+          user_id: string
+          week_number: number
+        }
+        Update: {
+          batch_id?: string | null
+          comments?: string | null
+          content_coverage_rating?: number
+          content_explanation_rating?: number
+          created_at?: string
+          id?: string
+          improvements?: string | null
+          issues?: string | null
+          session_rating?: number
+          topics_covered?: string
+          user_id?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_feedbacks_batch_id_fkey"
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "batches"
@@ -705,7 +967,7 @@ export type Database = {
       leave_status: "pending" | "approved" | "rejected"
       leave_type: "sick" | "casual"
       query_category: "course" | "faculty" | "schedule" | "work" | "other"
-      resource_type: "video" | "text" | "notes"
+      resource_type: "video" | "text" | "notes" | "external_link"
       skill_level: "beginner" | "intermediate" | "advanced"
       student_status: "pending" | "approved" | "rejected"
     }
@@ -840,7 +1102,7 @@ export const Constants = {
       leave_status: ["pending", "approved", "rejected"],
       leave_type: ["sick", "casual"],
       query_category: ["course", "faculty", "schedule", "work", "other"],
-      resource_type: ["video", "text", "notes"],
+      resource_type: ["video", "text", "notes", "external_link"],
       skill_level: ["beginner", "intermediate", "advanced"],
       student_status: ["pending", "approved", "rejected"],
     },
