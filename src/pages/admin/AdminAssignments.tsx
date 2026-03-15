@@ -81,6 +81,12 @@ export default function AdminAssignments() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingAssignment, setDeletingAssignment] = useState<Assignment | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [gradingStudent, setGradingStudent] = useState<string | null>(null);
+  const [gradeAttained, setGradeAttained] = useState("");
+  const [totalGrade, setTotalGrade] = useState("100");
+  const [gradeComments, setGradeComments] = useState("");
+  const [savingGrade, setSavingGrade] = useState(false);
+  const [grades, setGrades] = useState<Record<string, { grade_attained: number; total_grade: number; comments: string | null }>>({});
 
   // Form state
   const [batchId, setBatchId] = useState("");
