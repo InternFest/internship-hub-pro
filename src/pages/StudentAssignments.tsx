@@ -48,6 +48,7 @@ export default function StudentAssignments() {
   const [loading, setLoading] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [grades, setGrades] = useState<Record<string, { grade_attained: number; total_grade: number; comments: string | null }>>({});
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
