@@ -271,6 +271,42 @@ export type Database = {
           },
         ]
       }
+      generated_reviews: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          full_name: string
+          id: string
+          review_type: string
+          template_id: string | null
+          user_id: string
+          usn: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          full_name: string
+          id?: string
+          review_type: string
+          template_id?: string | null
+          user_id: string
+          usn: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          full_name?: string
+          id?: string
+          review_type?: string
+          template_id?: string | null
+          user_id?: string
+          usn?: string
+        }
+        Relationships: []
+      }
       internship_diary: {
         Row: {
           created_at: string
@@ -771,6 +807,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      review_templates: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          is_active: boolean
+          review_type: string
+          updated_at: string
+          uploaded_by: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          is_active?: boolean
+          review_type: string
+          updated_at?: string
+          uploaded_by: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          is_active?: boolean
+          review_type?: string
+          updated_at?: string
+          uploaded_by?: string
+          version?: number
+        }
+        Relationships: []
       }
       session_feedbacks: {
         Row: {
