@@ -15,7 +15,7 @@ import {
   GraduationCap, LayoutDashboard, User, BookOpen, FolderKanban, CalendarOff,
   MessageSquare, Users, Settings, LogOut, Menu, ChevronRight, Shield, UserCog,
   Library, ClipboardList, TrendingUp, Calendar, Briefcase, Upload, FileSearch,
-  Star, FileQuestion,
+  Star, FileQuestion, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,7 @@ const studentNavItems: NavItem[] = [
   { title: "Quizzes", href: "/quizzes", icon: FileQuestion },
   { title: "Calendar", href: "/calendar", icon: Calendar },
   { title: "Internship Diary", href: "/diary", icon: BookOpen },
+  { title: "Documents", href: "/documents", icon: FileText },
   { title: "Projects", href: "/projects", icon: FolderKanban },
   { title: "Session Feedback", href: "/session-feedback", icon: Star },
   { title: "Leave Requests", href: "/leaves", icon: CalendarOff },
@@ -74,6 +75,8 @@ const adminNavItems: NavItem[] = [
   { title: "Session Feedbacks", href: "/admin-feedbacks", icon: Star },
   { title: "Upload Leads", href: "/upload-leads", icon: Upload },
   { title: "Leads Generated", href: "/admin-leads-generated", icon: FileSearch },
+  { title: "Templates", href: "/admin-templates", icon: FileText },
+  { title: "Reviews Generated", href: "/admin-reviews-generated", icon: FileText },
 ];
 
 const bdeNavItems: NavItem[] = [

@@ -44,6 +44,9 @@ import BdeLeadsInfo from "./pages/bde/BdeLeadsInfo";
 import BdeLeadsGenerated from "./pages/bde/BdeLeadsGenerated";
 import AdminQuizzes from "./pages/admin/AdminQuizzes";
 import AdminSessionFeedbacks from "./pages/admin/AdminSessionFeedbacks";
+import StudentDocuments from "./pages/StudentDocuments";
+import AdminTemplates from "./pages/admin/AdminTemplates";
+import AdminReviewsGenerated from "./pages/admin/AdminReviewsGenerated";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -95,6 +98,7 @@ function AppRoutes() {
       <Route path="/quizzes" element={<ProtectedRoute><StudentQuizzes /></ProtectedRoute>} />
       <Route path="/session-feedback" element={<ProtectedRoute><SessionFeedback /></ProtectedRoute>} />
       <Route path="/my-progress" element={<ProtectedRoute><StudentProgress /></ProtectedRoute>} />
+      <Route path="/documents" element={<ProtectedRoute><StudentDocuments /></ProtectedRoute>} />
 
       {/* Shared admin/faculty routes */}
       <Route path="/students" element={<ProtectedRoute><AdminStudents /></ProtectedRoute>} />
@@ -115,6 +119,8 @@ function AppRoutes() {
       <Route path="/admin-leads-generated" element={<ProtectedRoute><AdminLeadsGenerated /></ProtectedRoute>} />
       <Route path="/manage-quizzes" element={<ProtectedRoute><AdminQuizzes /></ProtectedRoute>} />
       <Route path="/admin-feedbacks" element={<ProtectedRoute><AdminSessionFeedbacks /></ProtectedRoute>} />
+      <Route path="/admin-templates" element={<ProtectedRoute><AdminTemplates /></ProtectedRoute>} />
+      <Route path="/admin-reviews-generated" element={<ProtectedRoute><AdminReviewsGenerated /></ProtectedRoute>} />
 
       {/* BDE routes */}
       <Route path="/bde-dashboard" element={<ProtectedRoute><BdeDashboard /></ProtectedRoute>} />
